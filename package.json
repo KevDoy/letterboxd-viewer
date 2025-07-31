@@ -1,0 +1,17 @@
+{
+  "name": "letterboxd-viewer",
+  "version": "1.0.0",
+  "description": "A beautiful viewer for Letterboxd export data",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "serve": "npx http-server -p 8000",
+    "dev": "python -m http.server 8000"
+  },
+  "keywords": ["letterboxd", "movies", "viewer", "tmdb"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

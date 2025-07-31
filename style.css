@@ -1,0 +1,657 @@
+/* Custom Styles for Letterboxd Viewer */
+:root {
+    --letterboxd-green: #00ac52;
+    --letterboxd-orange: #ff8000;
+    --letterboxd-dark: #14181c;
+    --letterboxd-gray: #2c3440;
+    --letterboxd-light-gray: #445566;
+    --letterboxd-text: #9ab;
+}
+
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    color: #f8f9fa !important; /* Off-white color for navbar title */
+    display: flex;
+    align-items: center;
+}
+
+.navbar-brand img {
+    vertical-align: baseline;
+}
+
+.nav-link {
+    transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+    color: var(--letterboxd-green) !important;
+}
+
+.content-section {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Loading Indicators */
+.section-loading {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.section-loading .spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+.section-loading p {
+    margin-top: 1rem;
+    font-size: 1.1rem;
+}
+
+/* Movie Cards */
+.movie-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    background: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+}
+
+.movie-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.movie-poster {
+    width: 100%;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+    background: linear-gradient(45deg, #e0e0e0, #f0f0f0);
+}
+
+.movie-poster-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2/3;
+    overflow: hidden;
+}
+
+.movie-poster.loading {
+    background: linear-gradient(45deg, #e0e0e0, #f0f0f0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+}
+
+.movie-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #333;
+    text-decoration: none;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.movie-title:hover {
+    color: var(--letterboxd-green);
+    text-decoration: none;
+}
+
+.movie-year {
+    color: #666;
+    font-size: 0.8rem;
+}
+
+.movie-rating {
+    color: var(--letterboxd-orange);
+    font-weight: bold;
+}
+
+.star-rating {
+    color: var(--letterboxd-green);
+    font-size: 1rem;
+}
+
+/* Compact card body for smaller tiles */
+.movie-card .card-body {
+    padding: 0.75rem;
+}
+
+.movie-card .movie-meta {
+    font-size: 0.8rem;
+}
+
+.movie-card .tag {
+    font-size: 0.7rem;
+    padding: 1px 6px;
+}
+
+/* Review Cards */
+.review-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    background: white;
+}
+
+.review-content {
+    font-style: italic;
+    color: #555;
+    line-height: 1.6;
+}
+
+.review-meta {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* Review card title styling to match movie cards */
+.review-card .card-title a {
+    color: #333 !important;
+    text-decoration: none !important;
+}
+
+.review-card .card-title a:hover {
+    color: var(--letterboxd-green) !important;
+}
+
+/* List Cards */
+.list-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    background: white;
+    transition: transform 0.3s ease;
+}
+
+.list-card:hover {
+    transform: translateY(-3px);
+}
+
+.list-title {
+    color: var(--letterboxd-green);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.list-title:hover {
+    color: var(--letterboxd-orange);
+    text-decoration: none;
+}
+
+/* Stats Cards */
+.stats-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background: white;
+    height: 100%;
+}
+
+.stats-clickable {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stats-clickable:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Loading animation for movie cards */
+@keyframes shimmer {
+    0% { background-position: -200px 0; }
+    100% { background-position: calc(200px + 100%) 0; }
+}
+
+.loading-shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200px 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+/* User Selection Styles */
+.user-selection-card {
+    max-width: 500px;
+    margin: 2rem auto;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    border: none;
+}
+
+.user-select-btn, .user-switch-btn {
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+    text-align: left;
+}
+
+.user-select-btn:hover, .user-switch-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.user-select-btn .text-muted, .user-switch-btn .text-muted {
+    font-size: 0.85rem;
+    opacity: 0.8;
+}
+
+.user-select-btn:hover .text-muted, .user-switch-btn:hover .text-muted {
+    opacity: 1;
+}
+
+#profile-info:hover {
+    color: var(--letterboxd-green) !important;
+}
+
+/* List Details Styles */
+.modal-xl {
+    max-width: 95%;
+}
+
+.position-badge {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    z-index: 10;
+}
+
+.list-notes {
+    font-style: italic;
+    line-height: 1.2;
+}
+
+.movie-poster-container {
+    position: relative;
+}
+
+/* Smaller cards for list view */
+#listMoviesContainer .movie-card {
+    transition: transform 0.2s ease;
+}
+
+#listMoviesContainer .movie-card:hover {
+    transform: translateY(-2px);
+}
+
+#listMoviesContainer .movie-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    /* Mobile: 4 across (3 columns each) */
+    .movie-grid .col-lg-3,
+    .movie-grid .col-md-4,
+    .movie-grid .col-sm-6 {
+        flex: 0 0 25%;
+        max-width: 25%;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 991px) {
+    /* Tablet: 6 across (2 columns each) */
+    .movie-grid .col-lg-3,
+    .movie-grid .col-md-4 {
+        flex: 0 0 16.666667%;
+        max-width: 16.666667%;
+    }
+}
+
+@media (min-width: 992px) {
+    /* Desktop: 8 across (1.5 columns each) */
+    .movie-grid .col-lg-3 {
+        flex: 0 0 12.5%;
+        max-width: 12.5%;
+    }
+}
+
+/* Activity Timeline */
+.activity-item {
+    border-left: 3px solid var(--letterboxd-green);
+    padding-left: 15px;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.activity-item::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 8px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--letterboxd-green);
+}
+
+.activity-date {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.activity-year {
+    color: #777;
+    font-weight: normal;
+}
+
+/* Tags */
+.tag {
+    background: var(--letterboxd-green);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    margin-right: 5px;
+    display: inline-block;
+    margin-bottom: 3px;
+}
+
+/* Favorite films grid */
+.favorite-film {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.favorite-film img {
+    width: 80px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s ease;
+}
+
+.favorite-film img:hover {
+    transform: scale(1.05);
+}
+
+.favorite-film-title {
+    font-size: 0.85rem;
+    margin-top: 5px;
+    color: #222;
+    line-height: 1.2;
+    font-weight: 600;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.favorite-film-year {
+    font-size: 0.75rem;
+    color: #555;
+    margin-top: 2px;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+/* Pagination */
+.pagination .page-link {
+    color: var(--letterboxd-green);
+    border-color: var(--letterboxd-green);
+}
+
+.pagination .page-item.active .page-link {
+    background-color: var(--letterboxd-green);
+    border-color: var(--letterboxd-green);
+    color: white !important;
+}
+
+.pagination .page-link:hover {
+    color: var(--letterboxd-orange);
+    border-color: var(--letterboxd-orange);
+}
+
+/* Sorting controls */
+.form-select-sm {
+    border-color: var(--letterboxd-green);
+}
+
+.form-select-sm:focus {
+    border-color: var(--letterboxd-green);
+    box-shadow: 0 0 0 0.2rem rgba(0, 172, 82, 0.25);
+}
+
+/* Section headers with controls */
+.d-flex.justify-content-between.align-items-center {
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .d-flex.justify-content-between.align-items-center {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .d-flex.gap-2 {
+        justify-content: center;
+    }
+}
+
+/* Stats page - make numbers match navbar brand color */
+#stats .card h3.text-primary,
+#stats .card h3.text-success,
+#stats .card h3.text-warning,
+#stats .card h3.text-info {
+    color: var(--letterboxd-green) !important;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: var(--letterboxd-dark);
+        color: var(--letterboxd-text);
+    }
+    
+    .movie-card, .review-card, .list-card, .stats-card {
+        background: var(--letterboxd-gray);
+        color: var(--letterboxd-text);
+    }
+    
+    .movie-title {
+        color: var(--letterboxd-text);
+    }
+    
+    .card {
+        background: var(--letterboxd-gray);
+        border: 1px solid var(--letterboxd-light-gray);
+    }
+    
+    .card-header {
+        background: var(--letterboxd-light-gray);
+        border-bottom: 1px solid var(--letterboxd-light-gray);
+        color: var(--letterboxd-text);
+    }
+    
+    .favorite-film-title {
+        color: var(--letterboxd-text);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    }
+    
+    .favorite-film-year {
+        color: #999;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    }
+    
+    /* Improve contrast for dates and muted text in dark mode */
+    .activity-date {
+        color: #bbb !important;
+    }
+    
+    .activity-year {
+        color: #bbb !important;
+    }
+    
+    .activity-title {
+        color: var(--letterboxd-text) !important;
+    }
+    
+    .text-muted {
+        color: #aaa !important;
+    }
+    
+    /* Improve pagination active state contrast */
+    .page-item.active .page-link {
+        background-color: var(--letterboxd-green);
+        border-color: var(--letterboxd-green);
+        color: white !important;
+    }
+    
+    /* Loading indicators in dark mode */
+    .section-loading {
+        color: var(--letterboxd-text);
+    }
+    
+    .loading-shimmer {
+        background: linear-gradient(90deg, var(--letterboxd-gray) 25%, var(--letterboxd-light-gray) 50%, var(--letterboxd-gray) 75%);
+        background-size: 200px 100%;
+        animation: shimmer 1.5s infinite;
+    }
+    
+    /* User selection styles */
+    .user-selection-card, .modal-content {
+        background: var(--letterboxd-gray);
+        border: 1px solid var(--letterboxd-light-gray);
+        color: var(--letterboxd-text);
+    }
+    
+    .user-selection-card .card-header, .modal-header {
+        background: var(--letterboxd-light-gray);
+        border-bottom: 1px solid var(--letterboxd-light-gray);
+        color: var(--letterboxd-text);
+    }
+    
+    .modal-body {
+        background: var(--letterboxd-gray);
+        color: var(--letterboxd-text);
+    }
+    
+    .position-badge {
+        background: rgba(0, 172, 82, 0.9) !important;
+        color: white !important;
+    }
+    
+    /* User selection button text in dark mode */
+    .user-select-btn .text-muted, .user-switch-btn .text-muted {
+        color: #bbb !important;
+    }
+    
+    /* Stats cards text contrast in dark mode */
+    .card-body {
+        color: var(--letterboxd-text);
+    }
+    
+    .card-text {
+        color: #bbb !important;
+    }
+    
+    /* Dashboard stats cards need white text in dark mode */
+    #dashboard .card-text {
+        color: var(--letterboxd-text) !important;
+    }
+    
+    /* Ensure dashboard stats cards have white text in dark mode */
+    #dashboard .stats-clickable.card {
+        color: white !important;
+    }
+    
+    #dashboard .stats-clickable .card-title,
+    #dashboard .stats-clickable h2,
+    #dashboard .stats-clickable h5 {
+        color: white !important;
+    }
+    
+    /* User selection button text in dark mode */
+    .user-select-btn, .user-switch-btn {
+        color: white !important;
+    }
+    
+    .user-select-btn:hover, .user-switch-btn:hover {
+        color: white !important;
+    }
+    
+    .user-select-btn .text-muted, .user-switch-btn .text-muted {
+        color: rgba(255, 255, 255, 0.8) !important;
+    }
+    
+    .card h3 {
+        color: var(--letterboxd-text) !important;
+    }
+    
+    /* Stats page number colors should match navbar brand */
+    #stats .card h3.text-primary,
+    #stats .card h3.text-success,
+    #stats .card h3.text-warning,
+    #stats .card h3.text-info {
+        color: var(--letterboxd-green) !important;
+    }
+    
+    /* Review content contrast in dark mode */
+    .review-content {
+        color: var(--letterboxd-text) !important;
+    }
+    
+    .review-meta {
+        color: #aaa !important;
+    }
+    
+    /* Review card titles in dark mode */
+    .review-card .card-title a {
+        color: var(--letterboxd-text) !important;
+    }
+    
+    .review-card .card-title a:hover {
+        color: var(--letterboxd-green) !important;
+    }
+    
+    /* Outline primary buttons should have white text in dark mode */
+    .btn-outline-primary {
+        color: white !important;
+        border-color: var(--bs-primary) !important;
+    }
+    
+    .btn-outline-primary:hover {
+        color: white !important;
+        background-color: var(--bs-primary) !important;
+        border-color: var(--bs-primary) !important;
+    }
+}

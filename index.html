@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Letterboxd Export Viewer</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="navbar-hidden">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top d-none" id="main-navbar">
+        <div class="container">
+            <a class="navbar-brand" href="#" onclick="showDashboard()">
+                <img src="img/logo.png" alt="Logo" width="24" height="24" class="me-2">
+                Letterboxd Viewer
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showDashboard()">
+                            <i class="bi bi-house"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showDiary()">
+                            <i class="bi bi-journal"></i> Diary
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showAllFilms()">
+                            <i class="bi bi-collection"></i> Watched
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showWatchlist()">
+                            <i class="bi bi-bookmark"></i> Watchlist
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showReviews()">
+                            <i class="bi bi-star"></i> Reviews
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showLists()">
+                            <i class="bi bi-list-ul"></i> Lists
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showStats()">
+                            <i class="bi bi-graph-up"></i> Stats
+                        </a>
+                    </li>
+                </ul>
+                
+                <div class="navbar-nav">
+                    <a class="navbar-text text-decoration-none" href="#" onclick="showUserSwitcher()" id="profile-info" style="cursor: pointer;">
+                        <i class="bi bi-person-circle"></i> <span id="username">Loading...</span>
+                        <i class="bi bi-chevron-down ms-1" style="font-size: 0.8rem;"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid mt-4">
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading your Letterboxd data...</p>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard" class="content-section d-none">
+            <div class="row">
+                <div class="col-12">
+                    <h1 class="mb-4">Dashboard</h1>
+                </div>
+            </div>
+            
+            <!-- Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-primary text-white stats-clickable" onclick="app.showAllFilms()">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Films Watched</h5>
+                                    <h2 id="total-watched">0</h2>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-eye fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-success text-white stats-clickable" onclick="app.showReviews()">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Reviews Written</h5>
+                                    <h2 id="total-reviews">0</h2>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-star fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-warning text-white stats-clickable" onclick="app.showWatchlist()">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Watchlist</h5>
+                                    <h2 id="total-watchlist">0</h2>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-bookmark fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-info text-white stats-clickable" onclick="app.showStats()">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Average Rating</h5>
+                                    <h2 id="average-rating">0</h2>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-graph-up fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Activity -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Recent Activity</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="recent-activity">
+                                <!-- Recent activity will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Favorite Films</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="favorite-films">
+                                <!-- Favorite films will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Diary -->
+        <div id="diary" class="content-section d-none">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1>Diary</h1>
+                        <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm" style="width: auto;" onchange="app.changeDiarySort(this.value)">
+                                <option value="date-desc">Newest First</option>
+                                <option value="date-asc">Oldest First</option>
+                                <option value="name-asc">Title A-Z</option>
+                                <option value="name-desc">Title Z-A</option>
+                                <option value="year-desc">Release Year (Newest)</option>
+                                <option value="year-asc">Release Year (Oldest)</option>
+                                <option value="rating-desc">Highest Rated</option>
+                                <option value="rating-asc">Lowest Rated</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row movie-grid" id="diary-content">
+                        <!-- Diary entries will be populated here -->
+                    </div>
+                    <div id="diary-pagination" class="text-center mt-4">
+                        <!-- Pagination will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- All Films -->
+        <div id="all-films" class="content-section d-none">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1>Watched Films</h1>
+                        <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm" style="width: auto;" onchange="app.changeAllFilmsSort(this.value)">
+                                <option value="year-desc">Release Year (Newest)</option>
+                                <option value="year-asc">Release Year (Oldest)</option>
+                                <option value="name-asc">Title A-Z</option>
+                                <option value="name-desc">Title Z-A</option>
+                                <option value="rating-desc">Highest Rated</option>
+                                <option value="rating-asc">Lowest Rated</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row movie-grid" id="all-films-content">
+                        <!-- All films will be populated here -->
+                    </div>
+                    <div id="all-films-pagination" class="text-center mt-4">
+                        <!-- Pagination will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Watchlist -->
+        <div id="watchlist" class="content-section d-none">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1>Watchlist</h1>
+                        <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm" style="width: auto;" onchange="app.changeWatchlistSort(this.value)">
+                                <option value="date-desc">Recently Added</option>
+                                <option value="date-asc">Oldest Added</option>
+                                <option value="name-asc">Title A-Z</option>
+                                <option value="name-desc">Title Z-A</option>
+                                <option value="year-desc">Release Year (Newest)</option>
+                                <option value="year-asc">Release Year (Oldest)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row movie-grid" id="watchlist-content">
+                        <!-- Watchlist items will be populated here -->
+                    </div>
+                    <div id="watchlist-pagination" class="text-center mt-4">
+                        <!-- Pagination will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reviews -->
+        <div id="reviews" class="content-section d-none">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1>Reviews</h1>
+                        <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm" style="width: auto;" onchange="app.changeReviewsSort(this.value)">
+                                <option value="date-desc">Newest First</option>
+                                <option value="date-asc">Oldest First</option>
+                                <option value="name-asc">Title A-Z</option>
+                                <option value="name-desc">Title Z-A</option>
+                                <option value="rating-desc">Highest Rated</option>
+                                <option value="rating-asc">Lowest Rated</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="reviews-content">
+                        <!-- Reviews will be populated here -->
+                    </div>
+                    <div id="reviews-pagination" class="text-center mt-4">
+                        <!-- Pagination will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lists -->
+        <div id="lists" class="content-section d-none">
+            <div class="row">
+                <div class="col-12">
+                    <h1 class="mb-4">Lists</h1>
+                    <div id="lists-content">
+                        <!-- Lists will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div id="stats" class="content-section d-none">
+            <div class="row">
+                <div class="col-12">
+                    <h1 class="mb-4">Statistics</h1>
+                    <div id="stats-content">
+                        <!-- Statistics will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js for statistics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Main Application JS -->
+    <script src="app.js"></script>
+</body>
+</html>
