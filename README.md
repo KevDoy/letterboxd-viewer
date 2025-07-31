@@ -1,3 +1,5 @@
+<img src="https://raw.githubusercontent.com/KevDoy/letterboxd-viewer/refs/heads/main/favicon.png" height="70" alt>
+
 # Letterboxd Export Viewer
 
 A beautiful, static web application for viewing your exported Letterboxd data with movie posters from The Movie Database (TMDB).
@@ -15,6 +17,13 @@ A beautiful, static web application for viewing your exported Letterboxd data wi
 - 🌙 **Dark Mode** - Supports system dark mode preference with enhanced accessibility
 - 👥 **Multi-User Support** - View data from multiple Letterboxd exports (optional)
 - 🔧 **Single User Mode** - Automatic fallback when no users.json is present
+
+## Screenshots
+![screenshot](https://raw.githubusercontent.com/KevDoy/letterboxd-viewer/refs/heads/screenshots/screenshots/screenshot-dashboard.jpeg "Dashboard Screenshot")
+![screenshot](https://raw.githubusercontent.com/KevDoy/letterboxd-viewer/refs/heads/screenshots/screenshots/screenshot-diary.jpeg "Diary Screenshot")
+![screenshot](https://raw.githubusercontent.com/KevDoy/letterboxd-viewer/refs/heads/screenshots/screenshots/screenshot-list.jpeg "List Screenshot")
+![screenshot](https://raw.githubusercontent.com/KevDoy/letterboxd-viewer/refs/heads/screenshots/screenshots/screenshot-user-select.jpeg "Select User Screenshot")
+
 
 ## Setup Instructions
 
