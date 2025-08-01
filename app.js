@@ -33,6 +33,7 @@ class LetterboxdViewer {
         // Chart instances
         this.monthlyChart = null;
         this.ratingChart = null;
+        this.monthlyChartRange = '12months'; // Default to 12 months
         
         // Loading state management
         this.loadingStates = {
@@ -41,8 +42,7 @@ class LetterboxdViewer {
             allFilms: false,
             watchlist: false,
             reviews: false,
-            lists: false,
-            stats: false
+            lists: false
         };
         
         // Pagination and sorting state
@@ -51,7 +51,7 @@ class LetterboxdViewer {
             watchlist: { page: 1, limit: 32, sortBy: 'date-desc', sortOrder: 'desc' },
             reviews: { page: 1, limit: 10, sortBy: 'date-desc', sortOrder: 'desc' },
             watched: { page: 1, limit: 32, sortBy: 'year-desc', sortOrder: 'desc' },
-            allFilms: { page: 1, limit: 32, sortBy: 'year-desc', sortOrder: 'desc' }
+            allFilms: { page: 1, limit: 32, sortBy: 'year-desc', sortOrder: 'desc', ratingFilter: '' }
         };
         
         this.init();
@@ -676,8 +676,7 @@ class LetterboxdViewer {
             'all-films': 'showAllFilms',
             'watchlist': 'showWatchlist',
             'reviews': 'showReviews',
-            'lists': 'showLists',
-            'stats': 'showStats'
+            'lists': 'showLists'
         };
         
         const navFunction = sectionNavMap[this.currentSection];
@@ -700,18 +699,17 @@ class LetterboxdViewer {
         document.getElementById('total-reviews').textContent = this.data.reviews.length;
         document.getElementById('total-watchlist').textContent = this.data.watchlist.length;
         
-        // Calculate average rating
-        const ratingsWithValues = this.data.ratings.filter(r => r.Rating && !isNaN(parseFloat(r.Rating)));
-        const avgRating = ratingsWithValues.length > 0 
-            ? (ratingsWithValues.reduce((sum, r) => sum + parseFloat(r.Rating), 0) / ratingsWithValues.length).toFixed(1)
-            : '0';
-        document.getElementById('average-rating').textContent = avgRating;
-        
         // Render recent activity
         await this.renderRecentActivity();
         
         // Render favorite films
         await this.renderFavoriteFilms();
+        
+        // Create charts
+        setTimeout(() => {
+            this.createMonthlyChart();
+            this.createRatingChart();
+        }, 100);
     }
     
     async renderRecentActivity() {
@@ -785,7 +783,7 @@ class LetterboxdViewer {
             const tmdbData = await this.getTMDBData(film.Name, film.Year);
             const posterUrl = tmdbData.poster_path 
                 ? `${this.TMDB_IMAGE_BASE}${tmdbData.poster_path}`
-                : 'https://via.placeholder.com/80x120?text=No+Poster';
+                : 'https://via.placeholder.com/90x135?text=No+Poster';
             
             // Create TMDB URL
             const tmdbUrl = this.createTMDBUrl(tmdbData, film.Name, film.Year);
@@ -992,6 +990,12 @@ class LetterboxdViewer {
         await this.renderAllFilms();
     }
     
+    async changeAllFilmsRatingFilter(filterValue) {
+        this.pagination.allFilms.ratingFilter = filterValue;
+        this.pagination.allFilms.page = 1;
+        await this.renderAllFilms();
+    }
+    
     async showAllFilms() {
         this.showSection('all-films');
         await this.renderAllFilms();
@@ -1012,11 +1016,25 @@ class LetterboxdViewer {
         this.showSectionLoading('allFilms');
         
         // Use watched data - these are all films marked as watched
-        const filmsData = this.data.watched.map(entry => ({
-            ...entry,
-            source: 'watched',
-            watchDate: entry['Watched Date'] || entry.Date
-        }));
+        // Merge rating data from diary and ratings before sorting
+        let filmsData = this.data.watched.map(entry => {
+            // Look for rating data from diary first, then ratings
+            const diaryEntry = this.data.diary.find(d => d.Name === entry.Name && d.Year === entry.Year);
+            const ratingEntry = this.data.ratings.find(r => r.Name === entry.Name && r.Year === entry.Year);
+            
+            return {
+                ...entry,
+                source: 'watched',
+                watchDate: entry['Watched Date'] || entry.Date,
+                // Add rating from diary first, then ratings, then original
+                Rating: diaryEntry?.Rating || ratingEntry?.Rating || entry.Rating
+            };
+        });
+        
+        // Apply rating filter if specified
+        if (this.pagination.allFilms.ratingFilter) {
+            filmsData = this.filterFilmsByRating(filmsData, this.pagination.allFilms.ratingFilter);
+        }
         
         const sortedData = this.sortAllFilmsData(filmsData, this.pagination.allFilms);
         const paginatedData = this.paginateData(sortedData, this.pagination.allFilms);
@@ -1073,6 +1091,22 @@ class LetterboxdViewer {
                 return valueB > valueA ? 1 : valueB < valueA ? -1 : 0;
             } else {
                 return valueA > valueB ? 1 : valueA < valueB ? -1 : 0;
+            }
+        });
+    }
+    
+    filterFilmsByRating(data, ratingFilter) {
+        if (!ratingFilter) return data;
+        
+        return data.filter(film => {
+            if (ratingFilter === 'no-rating') {
+                // Show films with no rating
+                return !film.Rating || film.Rating === '' || film.Rating === '0';
+            } else {
+                // Show films with specific rating
+                const filmRating = parseFloat(film.Rating);
+                const filterRating = parseFloat(ratingFilter);
+                return filmRating === filterRating;
             }
         });
     }
@@ -1392,98 +1426,7 @@ class LetterboxdViewer {
         `;
     }
     
-    async showStats() {
-        this.showSection('stats');
-        await this.renderStats();
-    }
-    
-    async renderStats() {
-        const container = document.getElementById('stats-content');
-        
-        if (this.data.diary.length === 0 && this.data.ratings.length === 0) {
-            container.innerHTML = '<p class="text-muted">No data available for statistics.</p>';
-            return;
-        }
-        
-        // Create the stats layout
-        let html = `
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5><i class="bi bi-calendar3"></i> Monthly Viewing Activity</h5>
-                        </div>
-                        <div class="card-body">
-                            <canvas id="monthlyChart" width="400" height="200"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5><i class="bi bi-star"></i> Rating Distribution</h5>
-                        </div>
-                        <div class="card-body">
-                            <canvas id="ratingChart" width="400" height="200"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row mt-4">
-                <div class="col-md-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h3 class="text-primary">${this.data.diary.length}</h3>
-                            <p class="card-text">Films Logged</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h3 class="text-success">${this.data.reviews.filter(r => r.Review && r.Review.trim()).length}</h3>
-                            <p class="card-text">Reviews Written</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h3 class="text-warning">${this.data.watchlist.length}</h3>
-                            <p class="card-text">Films to Watch</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h3 class="text-info">${this.calculateAverageRating()}</h3>
-                            <p class="card-text">Average Rating</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        container.innerHTML = html;
-        
-        // Create charts after DOM is updated
-        setTimeout(() => {
-            this.createMonthlyChart();
-            this.createRatingChart();
-        }, 100);
-    }
-    
-    calculateAverageRating() {
-        const ratingsWithValues = this.data.ratings.filter(r => r.Rating && !isNaN(parseFloat(r.Rating)));
-        if (ratingsWithValues.length === 0) return '0.0';
-        
-        const average = ratingsWithValues.reduce((sum, r) => sum + parseFloat(r.Rating), 0) / ratingsWithValues.length;
-        return average.toFixed(1);
-    }
-    
-    createMonthlyChart() {
+    createMonthlyChart(range = this.monthlyChartRange) {
         const canvas = document.getElementById('monthlyChart');
         if (!canvas) return;
         
@@ -1502,8 +1445,10 @@ class LetterboxdViewer {
             }
         });
         
-        // Sort months and get last 12 months
-        const sortedMonths = Object.keys(monthlyData).sort().slice(-12);
+        // Sort months and apply range filter
+        const allSortedMonths = Object.keys(monthlyData).sort();
+        const sortedMonths = range === '12months' ? allSortedMonths.slice(-12) : allSortedMonths;
+        
         const labels = sortedMonths.map(month => {
             const [year, monthNum] = month.split('-');
             const date = new Date(year, monthNum - 1);
@@ -1559,14 +1504,27 @@ class LetterboxdViewer {
             '3.0': 0, '3.5': 0, '4.0': 0, '4.5': 0, '5.0': 0
         };
         
+        let totalRating = 0;
+        let ratingCount = 0;
+        
         this.data.ratings.forEach(entry => {
             if (entry.Rating) {
-                const rating = parseFloat(entry.Rating).toFixed(1);
-                if (ratingCounts.hasOwnProperty(rating)) {
-                    ratingCounts[rating]++;
+                const rating = parseFloat(entry.Rating);
+                const ratingKey = rating.toFixed(1);
+                if (ratingCounts.hasOwnProperty(ratingKey)) {
+                    ratingCounts[ratingKey]++;
+                    totalRating += rating;
+                    ratingCount++;
                 }
             }
         });
+        
+        // Calculate and display average rating
+        const averageRating = ratingCount > 0 ? (totalRating / ratingCount).toFixed(1) : '0.0';
+        const averageElement = document.getElementById('average-rating');
+        if (averageElement) {
+            averageElement.textContent = `${averageRating} ★`;
+        }
         
         const labels = Object.keys(ratingCounts).map(rating => `${rating} ★`);
         const data = Object.values(ratingCounts);
@@ -1582,11 +1540,23 @@ class LetterboxdViewer {
                     backgroundColor: [
                         '#00ac52', '#00ac52', '#00ac52', '#00ac52', '#00ac52',
                         '#00ac52', '#00ac52', '#00ac52', '#00ac52', '#00ac52'
+                    ],
+                    hoverBackgroundColor: [
+                        '#ff8000', '#ff8000', '#ff8000', '#ff8000', '#ff8000',
+                        '#ff8000', '#ff8000', '#ff8000', '#ff8000', '#ff8000'
                     ]
                 }]
             },
             options: {
                 responsive: true,
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const ratings = ['0.5', '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0'];
+                        const selectedRating = ratings[index];
+                        this.filterWatchedByRating(selectedRating);
+                    }
+                },
                 scales: {
                     y: {
                         beginAtZero: true,
@@ -1602,6 +1572,40 @@ class LetterboxdViewer {
                 }
             }
         });
+    }
+    
+    filterWatchedByRating(rating) {
+        // Set the rating filter
+        this.pagination.allFilms.ratingFilter = rating;
+        this.pagination.allFilms.page = 1;
+        
+        // Navigate to watched films section
+        this.showAllFilms();
+        
+        // Update the filter dropdown to reflect the selection
+        const filterDropdown = document.querySelector('#all-films select[onchange="app.changeAllFilmsRatingFilter(this.value)"]');
+        if (filterDropdown) {
+            filterDropdown.value = rating;
+        }
+    }
+    
+    setMonthlyChartRange(range) {
+        this.monthlyChartRange = range;
+        
+        // Update button states
+        const btn12 = document.getElementById('monthly-12-btn');
+        const btnAll = document.getElementById('monthly-all-btn');
+        
+        if (range === '12months') {
+            btn12.classList.add('active');
+            btnAll.classList.remove('active');
+        } else {
+            btn12.classList.remove('active');
+            btnAll.classList.add('active');
+        }
+        
+        // Recreate the chart with new range
+        this.createMonthlyChart(range);
     }
     
     showUserSwitcher() {
@@ -1719,13 +1723,44 @@ class LetterboxdViewer {
 }
 
 // Global functions for navigation
-function showDashboard() { app.showDashboard(); }
-function showDiary() { app.showDiary(); }
-function showAllFilms() { app.showAllFilms(); }
-function showWatchlist() { app.showWatchlist(); }
-function showReviews() { app.showReviews(); }
-function showLists() { app.showLists(); }
-function showStats() { app.showStats(); }
+function collapseMobileNav() {
+    // Check if we're on mobile and the navbar is expanded
+    const navbar = document.getElementById('navbarNav');
+    const navbarToggler = document.querySelector('.navbar-toggler');
+    
+    if (navbar && navbarToggler && !navbarToggler.classList.contains('collapsed')) {
+        // Use Bootstrap's collapse functionality to close the navbar
+        const bsCollapse = new bootstrap.Collapse(navbar, {
+            toggle: false
+        });
+        bsCollapse.hide();
+    }
+}
+
+function showDashboard() { 
+    collapseMobileNav();
+    app.showDashboard(); 
+}
+function showDiary() { 
+    collapseMobileNav();
+    app.showDiary(); 
+}
+function showAllFilms() { 
+    collapseMobileNav();
+    app.showAllFilms(); 
+}
+function showWatchlist() { 
+    collapseMobileNav();
+    app.showWatchlist(); 
+}
+function showReviews() { 
+    collapseMobileNav();
+    app.showReviews(); 
+}
+function showLists() { 
+    collapseMobileNav();
+    app.showLists(); 
+}
 function showUserSwitcher() { app.showUserSwitcher(); }
 
 // Initialize the app when the page loads

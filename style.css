@@ -12,6 +12,9 @@ body {
     background-color: var(--letterboxd-dark);
     color: var(--letterboxd-text);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 .navbar-brand {
@@ -320,7 +323,11 @@ body {
     /* Mobile: List view instead of grid */
     .movie-grid .col-lg-3,
     .movie-grid .col-md-4,
-    .movie-grid .col-sm-6 {
+    .movie-grid .col-sm-6,
+    .col-lg-2,
+    .col-md-3,
+    .col-sm-4,
+    .col-6 {
         flex: 0 0 100%;
         max-width: 100%;
     }
@@ -398,6 +405,42 @@ body {
         font-size: 10px;
         padding: 2px 6px;
         margin-right: 4px;
+    }
+    
+    /* List-specific mobile styles */
+    .movie-card .position-badge {
+        position: absolute;
+        top: 5px;
+        left: 5px;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-weight: bold;
+        z-index: 2;
+    }
+    
+    .movie-card .list-notes {
+        font-size: 11px;
+        color: var(--bs-text-muted);
+        margin: 2px 0 0 0;
+        line-height: 1.3;
+    }
+    
+    /* User selection mobile layout */
+    .user-select-btn .d-flex {
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        gap: 8px;
+    }
+    
+    .user-select-btn .text-start {
+        text-align: center !important;
+    }
+    
+    .user-select-btn .bi-chevron-right {
+        order: -1;
+        margin-bottom: 4px;
     }
 }
 
@@ -517,6 +560,37 @@ body {
     text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 
+/* Landscape layout for favorite films on dashboard */
+.favorite-films-landscape {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    justify-content: center;
+}
+
+.favorite-films-landscape .favorite-film {
+    margin-bottom: 0;
+    text-align: center;
+}
+
+.favorite-films-landscape .favorite-film img {
+    width: 100%;
+    height: auto;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s ease;
+}
+
+.favorite-films-landscape .favorite-film img:hover {
+    transform: scale(1.05);
+}
+
+/* Hide titles and years for dashboard favorite films */
+.favorite-films-landscape .favorite-film-title,
+.favorite-films-landscape .favorite-film-year {
+    display: none;
+}
+
 /* Pagination */
 .pagination .page-link {
     color: var(--letterboxd-green);
@@ -550,6 +624,53 @@ body {
     gap: 1rem;
 }
 
+/* Monthly chart toggle buttons */
+.btn-group-sm .btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Footer */
+.footer {
+    background-color: var(--letterboxd-light-gray);
+    border-top: 1px solid var(--letterboxd-gray);
+    margin-top: auto;
+}
+
+/* Main content area should grow to fill available space */
+.container-fluid {
+    flex: 1;
+}
+
+.footer-link {
+    color: var(--letterboxd-green);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.footer-link:hover {
+    color: var(--letterboxd-orange);
+    text-decoration: underline;
+}
+
+/* Average rating display */
+#average-rating {
+    font-size: 1.1rem;
+    color: var(--letterboxd-green);
+}
+
+/* Rating chart clickable styling */
+#ratingChart {
+    cursor: pointer;
+}
+
+/* Align monthly chart to bottom of container */
+.card:has(#monthlyChart) .card-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
 @media (max-width: 768px) {
     .d-flex.justify-content-between.align-items-center {
         flex-direction: column;
@@ -558,6 +679,12 @@ body {
     
     .d-flex.gap-2 {
         justify-content: center;
+    }
+    
+    /* Center the average rating section on mobile */
+    .card-header .d-flex.justify-content-between .text-end {
+        text-align: center !important;
+        align-self: center;
     }
 }
 
@@ -732,14 +859,18 @@ body {
         color: var(--letterboxd-green) !important;
     }
     
-    /* Outline primary buttons should have white text in dark mode */
+    /* Outline primary buttons with Letterboxd green styling */
     .btn-outline-primary {
-        color: white !important;
-        border-color: var(--bs-primary) !important;
+        color: var(--letterboxd-green) !important;
+        border-color: var(--letterboxd-green) !important;
+        background-color: transparent !important;
     }
     
-    .btn-outline-primary:hover {
+    .btn-outline-primary:hover,
+    .btn-outline-primary:focus,
+    .btn-outline-primary:active,
+    .btn-outline-primary.active {
         color: white !important;
-        background-color: var(--bs-primary) !important;
-        border-color: var(--bs-primary) !important;
+        background-color: var(--letterboxd-green) !important;
+        border-color: var(--letterboxd-green) !important;
     }

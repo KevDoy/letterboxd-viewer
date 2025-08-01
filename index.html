@@ -60,11 +60,6 @@
                             <i class="bi bi-list-ul"></i> Lists
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" onclick="showStats()">
-                            <i class="bi bi-graph-up"></i> Stats
-                        </a>
-                    </li>
                 </ul>
                 
                 <div class="navbar-nav">
@@ -97,7 +92,7 @@
             
             <!-- Stats Cards -->
             <div class="row mb-4">
-                <div class="col-md-3 mb-3">
+                <div class="col-md-4 mb-3">
                     <div class="card stats-card stats-clickable" onclick="app.showAllFilms()">
                         <div class="card-body">
                             <div class="d-flex justify-content-between">
@@ -113,7 +108,7 @@
                     </div>
                 </div>
                 
-                <div class="col-md-3 mb-3">
+                <div class="col-md-4 mb-3">
                     <div class="card stats-card stats-clickable" onclick="app.showReviews()">
                         <div class="card-body">
                             <div class="d-flex justify-content-between">
@@ -129,7 +124,7 @@
                     </div>
                 </div>
                 
-                <div class="col-md-3 mb-3">
+                <div class="col-md-4 mb-3">
                     <div class="card stats-card stats-clickable" onclick="app.showWatchlist()">
                         <div class="card-body">
                             <div class="d-flex justify-content-between">
@@ -144,30 +139,14 @@
                         </div>
                     </div>
                 </div>
-                
-                <div class="col-md-3 mb-3">
-                    <div class="card stats-card stats-clickable" onclick="app.showStats()">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <h5 class="card-title">Average Rating</h5>
-                                    <h2 id="average-rating">0</h2>
-                                </div>
-                                <div class="align-self-center">
-                                    <i class="bi bi-graph-up fs-1 stats-icon"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
             
-            <!-- Recent Activity -->
-            <div class="row">
-                <div class="col-lg-8">
-                    <div class="card">
+            <!-- Recent Activity and Monthly Chart -->
+            <div class="row mb-4">
+                <div class="col-lg-6 mb-3">
+                    <div class="card h-100">
                         <div class="card-header">
-                            <h5 class="mb-0">Recent Activity</h5>
+                            <h5 class="mb-0"><i class="bi bi-journal"></i> Recent Activity</h5>
                         </div>
                         <div class="card-body">
                             <div id="recent-activity">
@@ -176,16 +155,55 @@
                         </div>
                     </div>
                 </div>
-                
-                <div class="col-lg-4">
-                    <div class="card">
+                <div class="col-lg-6 mb-3">
+                    <div class="card h-100">
                         <div class="card-header">
-                            <h5 class="mb-0">Favorite Films</h5>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="bi bi-calendar3"></i> Monthly Viewing Activity</h5>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-primary active" id="monthly-12-btn" onclick="app.setMonthlyChartRange('12months')">12 Months</button>
+                                    <button type="button" class="btn btn-outline-primary" id="monthly-all-btn" onclick="app.setMonthlyChartRange('all')">All Time</button>
+                                </div>
+                            </div>
                         </div>
                         <div class="card-body">
-                            <div id="favorite-films">
+                            <canvas id="monthlyChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Favorite Films and Rating Distribution -->
+            <div class="row">
+                <div class="col-lg-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-heart"></i> Favorite Films</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="favorite-films" class="favorite-films-landscape">
                                 <!-- Favorite films will be populated here -->
                             </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="bi bi-star"></i> Rating Distribution</h5>
+                                <div class="text-end">
+                                    <small class="text-muted d-block">Average Rating</small>
+                                    <span class="fw-bold" id="average-rating">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="ratingChart" width="400" height="200"></canvas>
+                            <small class="text-muted text-center d-block mt-2">
+                                <i class="bi bi-hand-index"></i> Click on a rating to filter watched films
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -228,6 +246,20 @@
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h1>Watched Films</h1>
                         <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm" style="width: auto;" onchange="app.changeAllFilmsRatingFilter(this.value)">
+                                <option value="">All Ratings</option>
+                                <option value="5">★★★★★ (5.0)</option>
+                                <option value="4.5">★★★★½ (4.5)</option>
+                                <option value="4">★★★★ (4.0)</option>
+                                <option value="3.5">★★★½ (3.5)</option>
+                                <option value="3">★★★ (3.0)</option>
+                                <option value="2.5">★★½ (2.5)</option>
+                                <option value="2">★★ (2.0)</option>
+                                <option value="1.5">★½ (1.5)</option>
+                                <option value="1">★ (1.0)</option>
+                                <option value="0.5">½ (0.5)</option>
+                                <option value="no-rating">No Rating</option>
+                            </select>
                             <select class="form-select form-select-sm" style="width: auto;" onchange="app.changeAllFilmsSort(this.value)">
                                 <option value="year-desc">Release Year (Newest)</option>
                                 <option value="year-asc">Release Year (Oldest)</option>
@@ -313,19 +345,18 @@
                 </div>
             </div>
         </div>
-
-        <!-- Stats -->
-        <div id="stats" class="content-section d-none">
-            <div class="row">
-                <div class="col-12">
-                    <h1 class="mb-4">Statistics</h1>
-                    <div id="stats-content">
-                        <!-- Statistics will be populated here -->
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="footer mt-5 py-3">
+        <div class="container-fluid text-center">
+            <p class="mb-0 text-muted">
+                <small>
+                    Powered by <a href="https://github.com/KevDoy/letterboxd-viewer" target="_blank" class="footer-link">Letterboxd Export Viewer</a> v1.2
+                </small>
+            </p>
+        </div>
+    </footer>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

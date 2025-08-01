@@ -6,15 +6,17 @@ A beautiful, static web application for viewing your exported Letterboxd data wi
 
 ## Features
 
-- 📊 **Dashboard** - Overview of your viewing statistics and recent activity
+- 📊 **Dashboard** - Overview of your viewing statistics and recent activity with interactive charts
 - 📔 **Diary** - Browse all your logged films with ratings, dates, and tags
-- 🔖 **Watchlist** - View films you want to watch
+- �️ **Watched** - View all watched films with advanced filtering by star rating (5★, 4.5★, 4★, etc.)
+- �🔖 **Watchlist** - View films you want to watch
 - ⭐ **Reviews** - Read through all your written reviews
 - 📝 **Lists** - Browse your custom movie lists with detailed viewer
-- 📈 **Statistics** - Visual charts and insights about your viewing habits
+- 📈 **Interactive Statistics** - Visual charts with clickable elements to filter and explore your data
+- 🎯 **Smart Filtering** - Click on rating distribution chart segments to instantly filter watched films
 - 🎬 **Movie Posters** - Automatically fetches high-quality posters from TMDB (with TV/miniseries fallback)
-- 📱 **Responsive Design** - Works great on desktop, tablet, and mobile
-- 🌙 **Dark Mode** - Supports system dark mode preference with enhanced accessibility
+- 📱 **Mobile-First Responsive Design** - Optimized layouts for desktop, tablet, and mobile devices
+- 🌙 **Always-On Dark Mode** - Enhanced dark theme with Letterboxd color scheme
 - 👥 **Multi-User Support** - View data from multiple Letterboxd exports (optional)
 - 🔧 **Single User Mode** - Automatic fallback when no users.json is present
 
@@ -250,12 +252,13 @@ This application runs entirely in your browser. Your Letterboxd data never leave
 ## Contributing
 
 Feel free to contribute improvements! Some ideas:
-- Additional chart types and statistics
-- Enhanced list viewing with sorting/filtering
+- Additional chart types and interactive statistics
+- Enhanced mobile navigation and user experience
 - Export functionality for processed data
 - Better TMDB matching for international titles
 - Additional accessibility improvements
 - Performance optimizations for large datasets
+- More advanced filtering and search capabilities
 
 ## License
 
