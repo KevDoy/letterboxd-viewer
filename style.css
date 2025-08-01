@@ -9,7 +9,8 @@
 }
 
 body {
-    background-color: #f8f9fa;
+    background-color: var(--letterboxd-dark);
+    color: var(--letterboxd-text);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -418,22 +419,40 @@ body {
 }
 
 /* Activity Timeline */
-.activity-item {
-    border-left: 3px solid var(--letterboxd-green);
-    padding-left: 15px;
-    margin-bottom: 15px;
+#recent-activity {
     position: relative;
+}
+
+#recent-activity::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--letterboxd-green);
+    z-index: 1;
+}
+
+.activity-item {
+    padding-left: 35px;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 2;
 }
 
 .activity-item::before {
     content: '';
     position: absolute;
-    left: -6px;
+    left: 9px;
     top: 8px;
-    width: 9px;
-    height: 9px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background: var(--letterboxd-green);
+    border: 3px solid #fff;
+    z-index: 3;
+    box-shadow: 0 0 0 1px var(--letterboxd-green);
 }
 
 .activity-date {
@@ -550,16 +569,10 @@ body {
     color: var(--letterboxd-green) !important;
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-    body {
-        background-color: var(--letterboxd-dark);
-        color: var(--letterboxd-text);
-    }
-    
-    .movie-card, .review-card, .list-card, .stats-card {
-        background: var(--letterboxd-gray);
-        color: var(--letterboxd-text);
+/* Dark mode support - Always enabled */
+.movie-card, .review-card, .list-card, .stats-card {
+    background: var(--letterboxd-gray);
+    color: var(--letterboxd-text);
     }
     
     .movie-title {
@@ -592,8 +605,9 @@ body {
         color: #bbb !important;
     }
     
-    .activity-year {
-        color: #bbb !important;
+    /* Timeline dark mode support */
+    .activity-item::before {
+        border-color: var(--letterboxd-dark);
     }
     
     .activity-title {
@@ -729,4 +743,3 @@ body {
         background-color: var(--bs-primary) !important;
         border-color: var(--bs-primary) !important;
     }
-}

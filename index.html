@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -98,7 +98,7 @@
             <!-- Stats Cards -->
             <div class="row mb-4">
                 <div class="col-md-3 mb-3">
-                    <div class="card bg-primary text-white stats-clickable" onclick="app.showAllFilms()">
+                    <div class="card stats-card stats-clickable" onclick="app.showAllFilms()">
                         <div class="card-body">
                             <div class="d-flex justify-content-between">
                                 <div>
@@ -106,7 +106,7 @@
                                     <h2 id="total-watched">0</h2>
                                 </div>
                                 <div class="align-self-center">
-                                    <i class="bi bi-eye fs-1"></i>
+                                    <i class="bi bi-eye fs-1 stats-icon"></i>
                                 </div>
                             </div>
                         </div>
@@ -114,7 +114,7 @@
                 </div>
                 
                 <div class="col-md-3 mb-3">
-                    <div class="card bg-success text-white stats-clickable" onclick="app.showReviews()">
+                    <div class="card stats-card stats-clickable" onclick="app.showReviews()">
                         <div class="card-body">
                             <div class="d-flex justify-content-between">
                                 <div>
@@ -122,7 +122,7 @@
                                     <h2 id="total-reviews">0</h2>
                                 </div>
                                 <div class="align-self-center">
-                                    <i class="bi bi-star fs-1"></i>
+                                    <i class="bi bi-star fs-1 stats-icon"></i>
                                 </div>
                             </div>
                         </div>
@@ -130,7 +130,7 @@
                 </div>
                 
                 <div class="col-md-3 mb-3">
-                    <div class="card bg-warning text-white stats-clickable" onclick="app.showWatchlist()">
+                    <div class="card stats-card stats-clickable" onclick="app.showWatchlist()">
                         <div class="card-body">
                             <div class="d-flex justify-content-between">
                                 <div>
@@ -138,7 +138,7 @@
                                     <h2 id="total-watchlist">0</h2>
                                 </div>
                                 <div class="align-self-center">
-                                    <i class="bi bi-bookmark fs-1"></i>
+                                    <i class="bi bi-bookmark fs-1 stats-icon"></i>
                                 </div>
                             </div>
                         </div>
@@ -146,7 +146,7 @@
                 </div>
                 
                 <div class="col-md-3 mb-3">
-                    <div class="card bg-info text-white stats-clickable" onclick="app.showStats()">
+                    <div class="card stats-card stats-clickable" onclick="app.showStats()">
                         <div class="card-body">
                             <div class="d-flex justify-content-between">
                                 <div>
@@ -154,7 +154,7 @@
                                     <h2 id="average-rating">0</h2>
                                 </div>
                                 <div class="align-self-center">
-                                    <i class="bi bi-graph-up fs-1"></i>
+                                    <i class="bi bi-graph-up fs-1 stats-icon"></i>
                                 </div>
                             </div>
                         </div>
