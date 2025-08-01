@@ -638,7 +638,8 @@ body {
 }
 
 /* Main content area should grow to fill available space */
-.container-fluid {
+.container-fluid,
+.container {
     flex: 1;
 }
 

@@ -717,7 +717,7 @@ class LetterboxdViewer {
         // Sort by date descending (newest first), then slice
         const recentEntries = [...this.data.diary]
             .sort((a, b) => new Date(b.Date) - new Date(a.Date))
-            .slice(0, 10);
+            .slice(0, 5);
         
         if (recentEntries.length === 0) {
             recentContainer.innerHTML = '<p class="text-muted">No recent activity found.</p>';
@@ -747,7 +747,7 @@ class LetterboxdViewer {
         }
         
         // Add "View More" link if there are more entries
-        if (this.data.diary.length > 10) {
+        if (this.data.diary.length > 5) {
             html += `
                 <div class="text-center mt-3">
                     <a href="#" onclick="app.showDiary()" class="btn btn-outline-primary btn-sm">
@@ -1638,7 +1638,7 @@ class LetterboxdViewer {
             const isActive = user.id === this.currentUser.id;
             const lastUpdated = user.lastUpdated ? new Date(user.lastUpdated).toLocaleDateString() : 'Unknown';
             html += `
-                <button class="btn ${isActive ? 'btn-primary' : 'btn-outline-primary'} user-switch-btn mb-2 w-100" 
+                <button class="btn ${isActive ? 'btn-success' : 'btn-outline-primary'} user-select-btn mb-2 w-100" 
                         onclick="app.switchToUser('${user.id}')"
                         ${isActive ? 'disabled' : ''}>
                     <div class="d-flex justify-content-between align-items-center">
