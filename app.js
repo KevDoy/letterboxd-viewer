@@ -151,6 +151,14 @@ class LetterboxdViewer {
             <div class="container">
                 <div class="row justify-content-center">
                     <div class="col-md-6">
+                        <!-- App Branding -->
+                        <div class="text-center mb-4">
+                            <div class="d-flex justify-content-center align-items-center mb-2">
+                                <img src="img/logo.png" alt="Logo" width="32" height="32" class="me-3">
+                                <h2 class="mb-0 text-light">Letterboxd Viewer</h2>
+                            </div>
+                        </div>
+                        
                         <div class="card user-selection-card">
                             <div class="card-header text-center">
                                 <h4><i class="bi bi-person-circle"></i> Select User</h4>
