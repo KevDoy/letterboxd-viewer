@@ -444,20 +444,38 @@ body {
     }
 }
 
-@media (min-width: 769px) and (max-width: 991px) {
-    /* Tablet: 6 across (2 columns each) */
+@media (min-width: 768px) and (max-width: 991px) {
+    /* Tablet: 3 across (4 columns each) */
     .movie-grid .col-lg-3,
     .movie-grid .col-md-4 {
-        flex: 0 0 16.666667%;
-        max-width: 16.666667%;
+        flex: 0 0 33.333333%;
+        max-width: 33.333333%;
     }
 }
 
-@media (min-width: 992px) {
-    /* Desktop: 8 across (1.5 columns each) */
+@media (min-width: 576px) and (max-width: 767px) {
+    /* Small screens: 2 across (6 columns each) */
+    .movie-grid .col-lg-3,
+    .movie-grid .col-md-4,
+    .movie-grid .col-sm-6 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+}
+
+@media (min-width: 1200px) {
+    /* Desktop xl and up: 8 across (1.5 columns each) */
     .movie-grid .col-lg-3 {
         flex: 0 0 12.5%;
         max-width: 12.5%;
+    }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+    /* Below xl breakpoint: 4 across (3 columns each) */
+    .movie-grid .col-lg-3 {
+        flex: 0 0 25%;
+        max-width: 25%;
     }
 }
 
