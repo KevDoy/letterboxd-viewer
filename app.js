@@ -20,7 +20,7 @@ class LetterboxdViewer {
         };
         
         this.tmdbCache = new Map();
-        this.TMDB_API_KEY = 'aoou'; // Users will need to add their own API key
+        this.TMDB_API_KEY = 'your_actual_api_key_here'; // Users will need to add their own API key
         this.TMDB_BASE_URL = 'https://api.themoviedb.org/3';
         this.TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
         
