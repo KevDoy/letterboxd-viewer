@@ -2,7 +2,7 @@
 
 # Letterboxd Export Viewer
 
-A beautiful, static web application for viewing your exported Letterboxd data with movie posters from The Movie Database (TMDB).
+A self-hosted, static web application for viewing your exported Letterboxd data with movie posters from The Movie Database (TMDB).
 
 ## Features
 
