@@ -8,6 +8,31 @@
     --letterboxd-text: #9ab;
 }
 
+/* Dark Tooltips */
+.tooltip .tooltip-inner {
+    background-color: #000 !important;
+    color: #fff !important;
+    border: 1px solid #333 !important;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.tooltip.bs-tooltip-bottom .tooltip-arrow::before {
+    border-bottom-color: #000 !important;
+}
+
+.tooltip.bs-tooltip-top .tooltip-arrow::before {
+    border-top-color: #000 !important;
+}
+
+.tooltip.bs-tooltip-start .tooltip-arrow::before {
+    border-left-color: #000 !important;
+}
+
+.tooltip.bs-tooltip-end .tooltip-arrow::before {
+    border-right-color: #000 !important;
+}
+
 body {
     background-color: var(--letterboxd-dark);
     color: var(--letterboxd-text);
@@ -868,6 +893,25 @@ body {
     .review-meta {
         color: #aaa !important;
     }
+
+/* Custom Toast Styling */
+.toast-tmdb-error {
+    background-color: #fecaca !important; /* Pastel red background */
+    border: 1px solid #fca5a5 !important; /* Slightly darker red border */
+    color: #7f1d1d !important; /* Dark red text */
+}
+
+.toast-tmdb-error .toast-body {
+    color: #7f1d1d !important; /* Dark red text */
+}
+
+.toast-tmdb-error .btn-close {
+    filter: invert(19%) sepia(86%) saturate(1342%) hue-rotate(348deg) brightness(98%) contrast(95%); /* Dark red close button */
+}
+
+.toast-tmdb-error .bi-exclamation-triangle-fill {
+    color: #dc2626 !important; /* Red icon */
+}
     
     /* Review card titles in dark mode */
     .review-card .card-title a {

@@ -20,7 +20,7 @@ class LetterboxdViewer {
         };
         
         this.tmdbCache = new Map();
-        this.TMDB_API_KEY = 'your_actual_api_key_here'; // Users will need to add their own API key
+        this.TMDB_API_KEY = 'aoou'; // Users will need to add their own API key
         this.TMDB_BASE_URL = 'https://api.themoviedb.org/3';
         this.TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
         
@@ -44,6 +44,17 @@ class LetterboxdViewer {
             reviews: false,
             lists: false
         };
+        
+        // TMDB connectivity tracking
+        this.tmdbConnectivity = {
+            isOnline: true,
+            hasShownOfflineToast: false,
+            lastErrorTime: null
+        };
+        
+        // Fallback poster cycling
+        this.fallbackPosterCount = 18; // Number of fallback posters (01.jpeg through 18.jpeg)
+        this.posterIndexCache = new Map(); // Cache poster assignments for consistency
         
         // Pagination and sorting state
         this.pagination = {
@@ -519,12 +530,15 @@ class LetterboxdViewer {
         }
         
         if (!this.TMDB_API_KEY || this.TMDB_API_KEY === 'YOUR_TMDB_API_KEY') {
-            // Return placeholder data if no API key
+            // Handle missing API key case
+            this.handleTMDBConnectivityError('no_api_key');
+            
             return {
                 poster_path: null,
                 backdrop_path: null,
                 overview: '',
-                tmdb_id: null
+                tmdb_id: null,
+                error: 'no_api_key'
             };
         }
         
@@ -533,55 +547,78 @@ class LetterboxdViewer {
             const movieSearchUrl = `${this.TMDB_BASE_URL}/search/movie?api_key=${this.TMDB_API_KEY}&query=${encodeURIComponent(filmName)}&year=${year}`;
             const movieResponse = await fetch(movieSearchUrl);
             
-            if (movieResponse.ok) {
-                const movieData = await movieResponse.json();
-                const movie = movieData.results && movieData.results[0];
+            if (!movieResponse.ok) {
+                throw new Error(`HTTP ${movieResponse.status}: ${movieResponse.statusText}`);
+            }
+            
+            const movieData = await movieResponse.json();
+            const movie = movieData.results && movieData.results[0];
+            
+            if (movie) {
+                const result = {
+                    poster_path: movie.poster_path,
+                    backdrop_path: movie.backdrop_path,
+                    overview: movie.overview,
+                    tmdb_id: movie.id,
+                    media_type: 'movie'
+                };
                 
-                if (movie) {
-                    const result = {
-                        poster_path: movie.poster_path,
-                        backdrop_path: movie.backdrop_path,
-                        overview: movie.overview,
-                        tmdb_id: movie.id,
-                        media_type: 'movie'
-                    };
-                    
-                    this.tmdbCache.set(cacheKey, result);
-                    return result;
-                }
+                this.tmdbCache.set(cacheKey, result);
+                // Mark as online if we got a successful response
+                this.tmdbConnectivity.isOnline = true;
+                return result;
             }
             
             // If no movie found, try searching for TV shows
             const tvSearchUrl = `${this.TMDB_BASE_URL}/search/tv?api_key=${this.TMDB_API_KEY}&query=${encodeURIComponent(filmName)}&first_air_date_year=${year}`;
             const tvResponse = await fetch(tvSearchUrl);
             
-            if (tvResponse.ok) {
-                const tvData = await tvResponse.json();
-                const tvShow = tvData.results && tvData.results[0];
-                
-                if (tvShow) {
-                    const result = {
-                        poster_path: tvShow.poster_path,
-                        backdrop_path: tvShow.backdrop_path,
-                        overview: tvShow.overview,
-                        tmdb_id: tvShow.id,
-                        media_type: 'tv'
-                    };
-                    
-                    this.tmdbCache.set(cacheKey, result);
-                    return result;
-                }
+            if (!tvResponse.ok) {
+                throw new Error(`HTTP ${tvResponse.status}: ${tvResponse.statusText}`);
             }
+            
+            const tvData = await tvResponse.json();
+            const tvShow = tvData.results && tvData.results[0];
+            
+            if (tvShow) {
+                const result = {
+                    poster_path: tvShow.poster_path,
+                    backdrop_path: tvShow.backdrop_path,
+                    overview: tvShow.overview,
+                    tmdb_id: tvShow.id,
+                    media_type: 'tv'
+                };
+                
+                this.tmdbCache.set(cacheKey, result);
+                // Mark as online if we got a successful response
+                this.tmdbConnectivity.isOnline = true;
+                return result;
+            }
+            
+            // No results found but connection successful
+            this.tmdbConnectivity.isOnline = true;
+            
         } catch (error) {
             console.warn(`Error fetching TMDB data for ${filmName}:`, error);
+            
+            // Handle different types of errors
+            if (error.message.includes('HTTP 401')) {
+                // Invalid API key
+                this.handleTMDBConnectivityError('invalid_api_key');
+            } else if (error.name === 'TypeError' || error.message.includes('Failed to fetch') || 
+                       error.message.includes('Network') || error.message.includes('HTTP 5')) {
+                // Network connectivity issues
+                this.handleTMDBConnectivityError('connectivity');
+            }
         }
         
-        // Return empty data on error
+        // Return empty data on error or no results
         const emptyResult = {
             poster_path: null,
             backdrop_path: null,
             overview: '',
-            tmdb_id: null
+            tmdb_id: null,
+            error: this.tmdbConnectivity.isOnline ? 'no_results' : 'connectivity'
         };
         this.tmdbCache.set(cacheKey, emptyResult);
         return emptyResult;
@@ -593,6 +630,172 @@ class LetterboxdViewer {
             return `https://www.themoviedb.org/${mediaType}/${tmdbData.tmdb_id}`;
         } else {
             return `https://www.themoviedb.org/search?query=${encodeURIComponent(filmName + ' ' + filmYear)}`;
+        }
+    }
+    
+    // Toast notification system
+    showToast(message, type = 'info', duration = 5000) {
+        console.log('showToast called:', message, type); // Debug log
+        
+        // Check if user has permanently dismissed TMDB errors
+        if (type === 'tmdb-error' && localStorage.getItem('tmdb_errors_dismissed') === 'true') {
+            return;
+        }
+        
+        // Remove existing toast container if it exists
+        const existingContainer = document.getElementById('toast-container');
+        if (existingContainer) {
+            existingContainer.remove();
+        }
+        
+        // Create toast container
+        const toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '1055';
+        
+        // Create toast
+        const toast = document.createElement('div');
+        
+        // Apply custom class for TMDB errors
+        if (type === 'tmdb-error') {
+            toast.className = 'toast toast-tmdb-error align-items-center border-0 show';
+        } else {
+            toast.className = `toast align-items-center text-bg-${type} border-0 show`;
+        }
+        
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        
+        // Create appropriate content for TMDB errors vs regular toasts
+        if (type === 'tmdb-error') {
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
+        } else {
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
+        }
+        
+        toastContainer.appendChild(toast);
+        document.body.appendChild(toastContainer);
+        
+        console.log('Toast element created and added to DOM'); // Debug log
+        
+        // Add persistent dismissal for TMDB errors
+        if (type === 'tmdb-error') {
+            const closeButton = toast.querySelector('.btn-close');
+            if (closeButton) {
+                closeButton.addEventListener('click', () => {
+                    localStorage.setItem('tmdb_errors_dismissed', 'true');
+                    console.log('TMDB errors dismissed permanently');
+                });
+            }
+        }
+        
+        // Auto-hide after duration
+        setTimeout(() => {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+                const bsToast = new bootstrap.Toast(toast);
+                bsToast.hide();
+            } else {
+                // Fallback if Bootstrap JS isn't available
+                toast.classList.remove('show');
+                toast.classList.add('fade');
+            }
+            
+            setTimeout(() => {
+                if (toastContainer.parentNode) {
+                    toastContainer.remove();
+                }
+            }, 500);
+        }, duration);
+    }
+    
+    // Generate consistent fallback poster for a film
+    getFallbackPosterUrl(filmName, year) {
+        const cacheKey = `${filmName}_${year}`;
+        
+        // Check if we already assigned a poster to this film
+        if (this.posterIndexCache.has(cacheKey)) {
+            return `img/${this.posterIndexCache.get(cacheKey).toString().padStart(2, '0')}.jpeg`;
+        }
+        
+        // Generate a consistent index based on film name and year
+        let hash = 0;
+        const str = `${filmName}${year}`;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        
+        // Convert hash to index between 1 and fallbackPosterCount
+        const index = Math.abs(hash % this.fallbackPosterCount) + 1;
+        
+        // Cache the assignment for consistency
+        this.posterIndexCache.set(cacheKey, index);
+        
+        return `img/${index.toString().padStart(2, '0')}.jpeg`;
+    }
+    
+    // Check and handle TMDB connectivity
+    handleTMDBConnectivityError(errorType = 'connectivity') {
+        const now = Date.now();
+        
+        // Check if user has permanently dismissed TMDB errors
+        const dismissedKey = 'tmdb_errors_dismissed';
+        if (localStorage.getItem(dismissedKey) === 'true') {
+            return; // Don't show toast if user has dismissed it permanently
+        }
+        
+        // Mark as offline
+        this.tmdbConnectivity.isOnline = false;
+        this.tmdbConnectivity.lastErrorTime = now;
+        
+        // Create appropriate message based on error type
+        let message, toastType;
+        
+        if (errorType === 'no_api_key') {
+            message = 'TMDB API key not configured. Using local poster images instead.';
+            toastType = 'tmdb-error';
+        } else if (errorType === 'invalid_api_key') {
+            message = 'TMDB API key is invalid or unauthorized. Using local poster images instead.';
+            toastType = 'tmdb-error';
+        } else {
+            message = 'Unable to connect to TMDB servers. Using local poster images instead.';
+            toastType = 'tmdb-error';
+        }
+        
+        // Show toast only once per session or after 30 minutes
+        if (!this.tmdbConnectivity.hasShownOfflineToast || 
+            (this.tmdbConnectivity.lastErrorTime && now - this.tmdbConnectivity.lastErrorTime > 30 * 60 * 1000)) {
+            
+            this.showToast(message, toastType, 3000);
+            this.tmdbConnectivity.hasShownOfflineToast = true;
+        }
+    }
+    
+    // Generate poster URL with fallback handling
+    getPosterUrl(tmdbData, filmName, year) {
+        if (tmdbData.poster_path && this.tmdbConnectivity.isOnline) {
+            return `${this.TMDB_IMAGE_BASE}${tmdbData.poster_path}`;
+        } else {
+            return this.getFallbackPosterUrl(filmName, year);
         }
     }
     
@@ -781,21 +984,21 @@ class LetterboxdViewer {
         let html = '';
         for (const film of this.data.favoriteFilms) {
             const tmdbData = await this.getTMDBData(film.Name, film.Year);
-            const posterUrl = tmdbData.poster_path 
-                ? `${this.TMDB_IMAGE_BASE}${tmdbData.poster_path}`
-                : 'https://via.placeholder.com/90x135?text=No+Poster';
+            const posterUrl = this.getPosterUrl(tmdbData, film.Name, film.Year);
             
             // Create TMDB URL
             const tmdbUrl = this.createTMDBUrl(tmdbData, film.Name, film.Year);
             
             html += `
-                <div class="favorite-film">
+                <div class="favorite-film" 
+                     data-bs-toggle="tooltip" 
+                     data-bs-placement="bottom" 
+                     title="${film.Name} (${film.Year})">
                     <img src="${posterUrl}" 
                          alt="${film.Name}" 
                          class="img-fluid"
                          style="cursor: pointer;"
-                         onclick="window.open('${tmdbUrl}', '_blank')"
-                         title="${film.Name} (${film.Year})">
+                         onclick="window.open('${tmdbUrl}', '_blank')">
                     <div class="favorite-film-title">${film.Name}</div>
                     <div class="favorite-film-year">${film.Year}</div>
                 </div>
@@ -803,6 +1006,10 @@ class LetterboxdViewer {
         }
         
         container.innerHTML = html;
+        
+        // Initialize Bootstrap tooltips for favorite films
+        const tooltipTriggerList = container.querySelectorAll('[data-bs-toggle="tooltip"]');
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
     }
     
     async showDiary() {
@@ -1145,9 +1352,7 @@ class LetterboxdViewer {
     
     async createMovieCard(film, showDiaryInfo = false) {
         const tmdbData = await this.getTMDBData(film.Name, film.Year);
-        const posterUrl = tmdbData.poster_path 
-            ? `${this.TMDB_IMAGE_BASE}${tmdbData.poster_path}`
-            : 'https://via.placeholder.com/300x450?text=No+Poster';
+        const posterUrl = this.getPosterUrl(tmdbData, film.Name, film.Year);
         
         // Create TMDB URL
         const tmdbUrl = this.createTMDBUrl(tmdbData, film.Name, film.Year);
@@ -1222,9 +1427,7 @@ class LetterboxdViewer {
     
     async createReviewCard(review) {
         const tmdbData = await this.getTMDBData(review.Name, review.Year);
-        const posterUrl = tmdbData.poster_path 
-            ? `${this.TMDB_IMAGE_BASE}${tmdbData.poster_path}`
-            : 'https://via.placeholder.com/100x150?text=No+Poster';
+        const posterUrl = this.getPosterUrl(tmdbData, review.Name, review.Year);
         
         // Create TMDB URL
         const tmdbUrl = this.createTMDBUrl(tmdbData, review.Name, review.Year);
@@ -1402,9 +1605,7 @@ class LetterboxdViewer {
         }
         
         const tmdbData = await this.getTMDBData(movieName, movieYear);
-        const posterUrl = tmdbData.poster_path 
-            ? `${this.TMDB_IMAGE_BASE}${tmdbData.poster_path}`
-            : 'https://via.placeholder.com/300x450?text=No+Poster';
+        const posterUrl = this.getPosterUrl(tmdbData, movieName, movieYear);
         
         // Create TMDB URL
         const tmdbUrl = this.createTMDBUrl(tmdbData, movieName, movieYear);
