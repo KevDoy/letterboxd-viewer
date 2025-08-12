@@ -1,11 +1,11 @@
 /* =========================================
-   LIQUID GLASS tvOS THEME - OVERRIDES ONLY
+   LIQUID GLASS tvOS THEME - VISUAL OVERRIDES ONLY
    =========================================
    
-   This file contains ONLY theme-specific overrides
+   This file contains ONLY visual styling overrides
    for the liquid glass tvOS aesthetic.
    
-   Base functionality remains in style.css
+   Base functionality and animations remain in style.css
    ========================================= */
 
 :root {
@@ -33,15 +33,6 @@
     --tvos-shadow-focus: 0 20px 60px rgba(0, 0, 0, 0.6);
     --tvos-shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.3);
     --tvos-shadow-glow: 0 0 40px rgba(10, 132, 255, 0.3);
-    
-    /* tvOS Motion */
-    --tvos-scale-small: 1.03;
-    --tvos-scale-medium: 1.05;
-    --tvos-scale-large: 1.08;
-    --tvos-timing-quick: 200ms;
-    --tvos-timing-smooth: 400ms;
-    --tvos-timing-focus: 600ms;
-    --tvos-ease-focus: cubic-bezier(0.25, 0.46, 0.45, 0.94);
     
     /* Corner Radius System */
     --tvos-radius-small: 8px;
@@ -97,24 +88,17 @@ body {
     font-weight: 700 !important;
     font-size: 1.3rem !important;
     letter-spacing: -0.02em !important;
-    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
-}
-
-.navbar-brand:hover {
-    color: var(--tvos-focus-blue) !important;
-    transform: scale(1.02);
 }
 
 .nav-link {
     /* tvOS-style navigation links */
     font-weight: 500 !important;
-    font-size: 1 rem !important;
+    font-size: 1rem !important;
     padding: var(--tvos-spacing-xs) var(--tvos-spacing-sm) !important;
     margin: 0 4px !important;
     border-radius: var(--tvos-radius-medium) !important;
     background: transparent !important;
     border: 1px solid transparent !important;
-    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
     position: relative;
 }
 
@@ -128,24 +112,7 @@ body {
     background: var(--glass-thin);
     border-radius: inherit;
     opacity: 0;
-    transition: opacity var(--tvos-timing-smooth) var(--tvos-ease-focus);
     z-index: -1;
-}
-
-.nav-link:hover {
-    color: #ffffff !important;
-    transform: translateY(-2px) scale(var(--tvos-scale-small));
-    border-color: rgba(255, 255, 255, 0.2) !important;
-    box-shadow: var(--tvos-shadow-glow);
-}
-
-.nav-link:hover::before {
-    opacity: 1;
-}
-
-.nav-link:focus {
-    outline: 2px solid var(--tvos-focus-blue);
-    outline-offset: 2px;
 }
 
 /* =========================================
@@ -160,7 +127,6 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-radius: var(--tvos-radius-large) !important;
     box-shadow: var(--tvos-shadow-float) !important;
-    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
     position: relative;
     overflow: hidden;
 }
@@ -194,19 +160,7 @@ body {
         transparent 50%
     );
     opacity: 0;
-    transition: opacity var(--tvos-timing-smooth) var(--tvos-ease-focus);
     z-index: 1;
-}
-
-.card:hover {
-    transform: translateY(-4px) scale(var(--tvos-scale-small)) !important;
-    box-shadow: var(--tvos-shadow-focus) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
-    background: var(--glass-thick) !important;
-}
-
-.card:hover::after {
-    opacity: 1;
 }
 
 .card > * {
@@ -226,7 +180,6 @@ body {
     border: 2px solid rgba(255, 255, 255, 0.08) !important;
     border-radius: var(--tvos-radius-large) !important;
     box-shadow: var(--tvos-shadow-float) !important;
-    transition: all var(--tvos-timing-focus) var(--tvos-ease-focus) !important;
     cursor: pointer;
     position: relative;
     overflow: hidden;
@@ -245,19 +198,7 @@ body {
         rgba(10, 132, 255, 0.05) 100%
     );
     opacity: 0;
-    transition: opacity var(--tvos-timing-focus) var(--tvos-ease-focus);
     z-index: 1;
-}
-
-.movie-card:hover {
-    transform: translateY(-8px) scale(var(--tvos-scale-medium)) !important;
-    box-shadow: var(--tvos-shadow-focus), var(--tvos-shadow-glow) !important;
-    border-color: rgba(10, 132, 255, 0.4) !important;
-    background: var(--glass-thick) !important;
-}
-
-.movie-card:hover::before {
-    opacity: 1;
 }
 
 .movie-card:focus {
@@ -274,22 +215,12 @@ body {
 /* Movie poster enhancements */
 .movie-poster {
     border-radius: var(--tvos-radius-medium) var(--tvos-radius-medium) 0 0 !important;
-    transition: transform var(--tvos-timing-focus) var(--tvos-ease-focus) !important;
-}
-
-.movie-card:hover .movie-poster {
-    transform: scale(1.02);
 }
 
 /* Movie title enhancements */
 .movie-title {
     font-weight: 600 !important;
     letter-spacing: -0.01em !important;
-    transition: color var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
-}
-
-.movie-card:hover .movie-title {
-    color: var(--tvos-focus-blue) !important;
 }
 
 /* =========================================
@@ -304,7 +235,6 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     border-radius: var(--tvos-radius-xlarge) !important;
     box-shadow: var(--tvos-shadow-float) !important;
-    transition: all var(--tvos-timing-focus) var(--tvos-ease-focus) !important;
     position: relative;
     overflow: hidden;
 }
@@ -322,19 +252,7 @@ body {
         transparent 60%
     );
     opacity: 0;
-    transition: opacity var(--tvos-timing-focus) var(--tvos-ease-focus);
     z-index: 1;
-}
-
-.stats-clickable:hover {
-    transform: translateY(-6px) scale(var(--tvos-scale-medium)) !important;
-    box-shadow: var(--tvos-shadow-focus) !important;
-    border-color: rgba(191, 90, 242, 0.3) !important;
-    background: var(--glass-ultra-thick) !important;
-}
-
-.stats-clickable:hover::before {
-    opacity: 1;
 }
 
 .stats-card h2 {
@@ -358,13 +276,6 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: var(--tvos-radius-large) !important;
     box-shadow: var(--tvos-shadow-subtle) !important;
-    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
-}
-
-.review-card:hover {
-    transform: translateY(-3px) scale(1.01) !important;
-    box-shadow: var(--tvos-shadow-float) !important;
-    border-color: rgba(255, 45, 146, 0.2) !important;
 }
 
 .list-card {
@@ -374,13 +285,6 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: var(--tvos-radius-large) !important;
     box-shadow: var(--tvos-shadow-subtle) !important;
-    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
-}
-
-.list-card:hover {
-    transform: translateY(-4px) scale(1.02) !important;
-    box-shadow: var(--tvos-shadow-float) !important;
-    border-color: rgba(0, 212, 170, 0.2) !important;
 }
 
 /* =========================================
@@ -418,14 +322,6 @@ body {
     backdrop-filter: var(--tvos-blur-light) !important;
     -webkit-backdrop-filter: var(--tvos-blur-light) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
-}
-
-.btn:hover {
-    transform: translateY(-2px) scale(1.02) !important;
-    background: var(--glass-thick) !important;
-    border-color: rgba(255, 255, 255, 0.25) !important;
-    box-shadow: var(--tvos-shadow-subtle) !important;
 }
 
 .btn-outline-primary {
@@ -455,7 +351,6 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-radius: var(--tvos-radius-medium) !important;
     color: var(--letterboxd-text) !important;
-    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
 }
 
 .form-control:focus,
@@ -478,15 +373,6 @@ body {
     color: var(--letterboxd-text) !important;
     margin: 0 4px !important;
     padding: var(--tvos-spacing-xs) var(--tvos-spacing-sm) !important;
-    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
-}
-
-.pagination .page-link:hover {
-    background: var(--glass-thick) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
-    color: white !important;
-    transform: translateY(-1px) scale(1.05) !important;
-    box-shadow: var(--tvos-shadow-subtle) !important;
 }
 
 .pagination .page-item.active .page-link {
@@ -540,15 +426,6 @@ body {
     -webkit-backdrop-filter: var(--tvos-blur-light) !important;
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-radius: var(--tvos-radius-medium) !important;
-    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
-}
-
-.user-select-btn:hover,
-.user-switch-btn:hover {
-    background: var(--glass-thick) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
-    transform: translateY(-2px) scale(1.02) !important;
-    box-shadow: var(--tvos-shadow-subtle) !important;
 }
 
 /* =========================================
@@ -602,13 +479,6 @@ body {
     border-radius: var(--tvos-radius-medium) !important;
     border: 2px solid rgba(255, 255, 255, 0.1) !important;
     box-shadow: var(--tvos-shadow-float) !important;
-    transition: all var(--tvos-timing-focus) var(--tvos-ease-focus) !important;
-}
-
-.favorite-film:hover img {
-    transform: scale(var(--tvos-scale-medium)) translateY(-4px) !important;
-    border-color: rgba(10, 132, 255, 0.4) !important;
-    box-shadow: var(--tvos-shadow-focus), var(--tvos-shadow-glow) !important;
 }
 
 /* =========================================
@@ -624,12 +494,6 @@ body {
 
 .footer-link {
     color: var(--tvos-focus-blue) !important;
-    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
-}
-
-.footer-link:hover {
-    color: var(--tvos-focus-purple) !important;
-    text-shadow: 0 0 8px rgba(191, 90, 242, 0.4) !important;
 }
 
 /* =========================================
@@ -637,15 +501,6 @@ body {
    ========================================= */
 
 @media (max-width: 768px) {
-    /* Mobile optimizations for touch */
-    .movie-card:hover {
-        transform: translateY(-4px) scale(1.02) !important; /* Reduced scale for mobile */
-    }
-    
-    .stats-clickable:hover {
-        transform: translateY(-3px) scale(1.01) !important; /* Reduced scale for mobile */
-    }
-    
     /* Reduce blur for performance on mobile */
     .card {
         backdrop-filter: var(--tvos-blur-light) !important;
@@ -655,23 +510,6 @@ body {
     .navbar {
         backdrop-filter: var(--tvos-blur-light) !important;
         -webkit-backdrop-filter: var(--tvos-blur-light) !important;
-    }
-}
-
-/* =========================================
-   REDUCED MOTION SUPPORT
-   ========================================= */
-
-@media (prefers-reduced-motion: reduce) {
-    * {
-        transition: none !important;
-        animation: none !important;
-    }
-    
-    .movie-card:hover,
-    .stats-card:hover,
-    .card:hover {
-        transform: none !important;
     }
 }
 
@@ -695,28 +533,6 @@ body {
 }
 
 /* =========================================
-   LOADING & SHIMMER EFFECTS
-   ========================================= */
-
-.loading-shimmer {
-    background: linear-gradient(
-        90deg,
-        var(--glass-thin) 0%,
-        var(--glass-regular) 20%,
-        var(--glass-thick) 40%,
-        var(--glass-regular) 60%,
-        var(--glass-thin) 100%
-    ) !important;
-    background-size: 200% 100%;
-    animation: liquidShimmer 2s ease-in-out infinite;
-}
-
-@keyframes liquidShimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-}
-
-/* =========================================
    FOCUS MANAGEMENT FOR ACCESSIBILITY
    ========================================= */
 
@@ -726,27 +542,4 @@ body {
     outline: 3px solid var(--tvos-focus-blue) !important;
     outline-offset: 3px;
     border-color: var(--tvos-focus-blue) !important;
-}
-
-/* =========================================
-   PERFORMANCE OPTIMIZATIONS
-   ========================================= */
-
-.card,
-.movie-card,
-.stats-card,
-.nav-link,
-.btn {
-    will-change: transform, box-shadow;
-    transform: translateZ(0);
-    backface-visibility: hidden;
-}
-
-/* Ensure smooth 60fps animations */
-@supports (backdrop-filter: blur(1px)) {
-    .card,
-    .navbar,
-    .modal-content {
-        contain: layout style paint;
-    }
 }
