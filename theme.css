@@ -1,0 +1,752 @@
+/* =========================================
+   LIQUID GLASS tvOS THEME - OVERRIDES ONLY
+   =========================================
+   
+   This file contains ONLY theme-specific overrides
+   for the liquid glass tvOS aesthetic.
+   
+   Base functionality remains in style.css
+   ========================================= */
+
+:root {
+    /* tvOS Color Palette */
+    --tvos-focus-blue: #0a84ff;
+    --tvos-focus-purple: #bf5af2;
+    --tvos-focus-pink: #ff2d92;
+    --tvos-focus-orange: #ff9f0a;
+    --tvos-focus-mint: #00d4aa;
+    
+    /* Glass Material System */
+    --glass-ultra-thin: rgba(255, 255, 255, 0.05);
+    --glass-thin: rgba(255, 255, 255, 0.08);
+    --glass-regular: rgba(255, 255, 255, 0.12);
+    --glass-thick: rgba(255, 255, 255, 0.18);
+    --glass-ultra-thick: rgba(255, 255, 255, 0.25);
+    
+    /* tvOS Blur Effects */
+    --tvos-blur-light: blur(20px);
+    --tvos-blur-medium: blur(40px);
+    --tvos-blur-heavy: blur(60px);
+    
+    /* tvOS Shadow System */
+    --tvos-shadow-float: 0 10px 40px rgba(0, 0, 0, 0.4);
+    --tvos-shadow-focus: 0 20px 60px rgba(0, 0, 0, 0.6);
+    --tvos-shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --tvos-shadow-glow: 0 0 40px rgba(10, 132, 255, 0.3);
+    
+    /* tvOS Motion */
+    --tvos-scale-small: 1.03;
+    --tvos-scale-medium: 1.05;
+    --tvos-scale-large: 1.08;
+    --tvos-timing-quick: 200ms;
+    --tvos-timing-smooth: 400ms;
+    --tvos-timing-focus: 600ms;
+    --tvos-ease-focus: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    
+    /* Corner Radius System */
+    --tvos-radius-small: 8px;
+    --tvos-radius-medium: 12px;
+    --tvos-radius-large: 20px;
+    --tvos-radius-xlarge: 28px;
+    
+    /* Spacing overrides for tvOS */
+    --tvos-spacing-xs: 8px;
+    --tvos-spacing-sm: 16px;
+    --tvos-spacing-md: 24px;
+    --tvos-spacing-lg: 32px;
+    --tvos-spacing-xl: 48px;
+}
+
+/* =========================================
+   GLOBAL FOUNDATION OVERRIDES
+   ========================================= */
+
+body {
+    /* Override default background with liquid glass effect */
+    background: 
+        radial-gradient(circle at 20% 80%, rgba(10, 132, 255, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(191, 90, 242, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(255, 45, 146, 0.1) 0%, transparent 50%),
+        var(--letterboxd-dark) !important;
+    
+    /* tvOS typography */
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif !important;
+    font-weight: 400;
+    letter-spacing: -0.022em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* =========================================
+   NAVIGATION - LIQUID GLASS tvOS STYLE
+   ========================================= */
+
+.navbar {
+    /* Override default navbar */
+    background: var(--glass-thick) !important;
+    backdrop-filter: var(--tvos-blur-medium);
+    -webkit-backdrop-filter: var(--tvos-blur-medium);
+    border: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: var(--tvos-shadow-subtle) !important;
+    padding: var(--tvos-spacing-sm) 0 !important;
+}
+
+.navbar-brand {
+    /* Enhance brand styling */
+    font-weight: 700 !important;
+    font-size: 1.3rem !important;
+    letter-spacing: -0.02em !important;
+    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
+}
+
+.navbar-brand:hover {
+    color: var(--tvos-focus-blue) !important;
+    transform: scale(1.02);
+}
+
+.nav-link {
+    /* tvOS-style navigation links */
+    font-weight: 500 !important;
+    font-size: 1 rem !important;
+    padding: var(--tvos-spacing-xs) var(--tvos-spacing-sm) !important;
+    margin: 0 4px !important;
+    border-radius: var(--tvos-radius-medium) !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
+    position: relative;
+}
+
+.nav-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--glass-thin);
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity var(--tvos-timing-smooth) var(--tvos-ease-focus);
+    z-index: -1;
+}
+
+.nav-link:hover {
+    color: #ffffff !important;
+    transform: translateY(-2px) scale(var(--tvos-scale-small));
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: var(--tvos-shadow-glow);
+}
+
+.nav-link:hover::before {
+    opacity: 1;
+}
+
+.nav-link:focus {
+    outline: 2px solid var(--tvos-focus-blue);
+    outline-offset: 2px;
+}
+
+/* =========================================
+   LIQUID GLASS CARD SYSTEM
+   ========================================= */
+
+.card {
+    /* Override default card styling */
+    background: var(--glass-regular) !important;
+    backdrop-filter: var(--tvos-blur-light) !important;
+    -webkit-backdrop-filter: var(--tvos-blur-light) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: var(--tvos-radius-large) !important;
+    box-shadow: var(--tvos-shadow-float) !important;
+    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, 
+        transparent, 
+        rgba(255, 255, 255, 0.3) 20%, 
+        rgba(255, 255, 255, 0.3) 80%, 
+        transparent
+    );
+    z-index: 1;
+}
+
+.card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(
+        circle at 30% 20%,
+        rgba(10, 132, 255, 0.05) 0%,
+        transparent 50%
+    );
+    opacity: 0;
+    transition: opacity var(--tvos-timing-smooth) var(--tvos-ease-focus);
+    z-index: 1;
+}
+
+.card:hover {
+    transform: translateY(-4px) scale(var(--tvos-scale-small)) !important;
+    box-shadow: var(--tvos-shadow-focus) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    background: var(--glass-thick) !important;
+}
+
+.card:hover::after {
+    opacity: 1;
+}
+
+.card > * {
+    position: relative;
+    z-index: 2;
+}
+
+/* =========================================
+   MOVIE CARDS - tvOS FOCUS SYSTEM
+   ========================================= */
+
+.movie-card {
+    /* Enhanced movie card styling */
+    background: var(--glass-regular) !important;
+    backdrop-filter: var(--tvos-blur-light) !important;
+    -webkit-backdrop-filter: var(--tvos-blur-light) !important;
+    border: 2px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: var(--tvos-radius-large) !important;
+    box-shadow: var(--tvos-shadow-float) !important;
+    transition: all var(--tvos-timing-focus) var(--tvos-ease-focus) !important;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.movie-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.05) 50%,
+        rgba(10, 132, 255, 0.05) 100%
+    );
+    opacity: 0;
+    transition: opacity var(--tvos-timing-focus) var(--tvos-ease-focus);
+    z-index: 1;
+}
+
+.movie-card:hover {
+    transform: translateY(-8px) scale(var(--tvos-scale-medium)) !important;
+    box-shadow: var(--tvos-shadow-focus), var(--tvos-shadow-glow) !important;
+    border-color: rgba(10, 132, 255, 0.4) !important;
+    background: var(--glass-thick) !important;
+}
+
+.movie-card:hover::before {
+    opacity: 1;
+}
+
+.movie-card:focus {
+    outline: none;
+    border-color: var(--tvos-focus-blue) !important;
+    box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.3), var(--tvos-shadow-focus);
+}
+
+.movie-card > * {
+    position: relative;
+    z-index: 2;
+}
+
+/* Movie poster enhancements */
+.movie-poster {
+    border-radius: var(--tvos-radius-medium) var(--tvos-radius-medium) 0 0 !important;
+    transition: transform var(--tvos-timing-focus) var(--tvos-ease-focus) !important;
+}
+
+.movie-card:hover .movie-poster {
+    transform: scale(1.02);
+}
+
+/* Movie title enhancements */
+.movie-title {
+    font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
+    transition: color var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
+}
+
+.movie-card:hover .movie-title {
+    color: var(--tvos-focus-blue) !important;
+}
+
+/* =========================================
+   STATS CARDS - tvOS DASHBOARD STYLE
+   ========================================= */
+
+.stats-card {
+    /* Enhanced stats card styling */
+    background: var(--glass-thick) !important;
+    backdrop-filter: var(--tvos-blur-medium) !important;
+    -webkit-backdrop-filter: var(--tvos-blur-medium) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: var(--tvos-radius-xlarge) !important;
+    box-shadow: var(--tvos-shadow-float) !important;
+    transition: all var(--tvos-timing-focus) var(--tvos-ease-focus) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(
+        circle at 70% 30%,
+        rgba(191, 90, 242, 0.08) 0%,
+        transparent 60%
+    );
+    opacity: 0;
+    transition: opacity var(--tvos-timing-focus) var(--tvos-ease-focus);
+    z-index: 1;
+}
+
+.stats-clickable:hover {
+    transform: translateY(-6px) scale(var(--tvos-scale-medium)) !important;
+    box-shadow: var(--tvos-shadow-focus) !important;
+    border-color: rgba(191, 90, 242, 0.3) !important;
+    background: var(--glass-ultra-thick) !important;
+}
+
+.stats-clickable:hover::before {
+    opacity: 1;
+}
+
+.stats-card h2 {
+    /* Enhanced number styling */
+    font-weight: 800 !important;
+    background: linear-gradient(135deg, #ffffff, #a0a0a0) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* =========================================
+   REVIEW & LIST CARDS
+   ========================================= */
+
+.review-card {
+    background: var(--glass-regular) !important;
+    backdrop-filter: var(--tvos-blur-light) !important;
+    -webkit-backdrop-filter: var(--tvos-blur-light) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: var(--tvos-radius-large) !important;
+    box-shadow: var(--tvos-shadow-subtle) !important;
+    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
+}
+
+.review-card:hover {
+    transform: translateY(-3px) scale(1.01) !important;
+    box-shadow: var(--tvos-shadow-float) !important;
+    border-color: rgba(255, 45, 146, 0.2) !important;
+}
+
+.list-card {
+    background: var(--glass-regular) !important;
+    backdrop-filter: var(--tvos-blur-light) !important;
+    -webkit-backdrop-filter: var(--tvos-blur-light) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: var(--tvos-radius-large) !important;
+    box-shadow: var(--tvos-shadow-subtle) !important;
+    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
+}
+
+.list-card:hover {
+    transform: translateY(-4px) scale(1.02) !important;
+    box-shadow: var(--tvos-shadow-float) !important;
+    border-color: rgba(0, 212, 170, 0.2) !important;
+}
+
+/* =========================================
+   CARD HEADERS & CONTENT
+   ========================================= */
+
+.card-header {
+    background: var(--glass-thin) !important;
+    backdrop-filter: var(--tvos-blur-light) !important;
+    -webkit-backdrop-filter: var(--tvos-blur-light) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: var(--tvos-radius-large) var(--tvos-radius-large) 0 0 !important;
+    padding: var(--tvos-spacing-md) !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
+}
+
+.card-body {
+    padding: var(--tvos-spacing-md) !important;
+    backdrop-filter: var(--tvos-blur-light);
+    -webkit-backdrop-filter: var(--tvos-blur-light);
+}
+
+/* =========================================
+   BUTTONS & FORM CONTROLS
+   ========================================= */
+
+.btn {
+    /* tvOS-style buttons */
+    border-radius: var(--tvos-radius-medium) !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
+    padding: var(--tvos-spacing-xs) var(--tvos-spacing-md) !important;
+    background: var(--glass-regular) !important;
+    backdrop-filter: var(--tvos-blur-light) !important;
+    -webkit-backdrop-filter: var(--tvos-blur-light) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
+}
+
+.btn:hover {
+    transform: translateY(-2px) scale(1.02) !important;
+    background: var(--glass-thick) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    box-shadow: var(--tvos-shadow-subtle) !important;
+}
+
+.btn-outline-primary {
+    color: var(--tvos-focus-blue) !important;
+    border-color: var(--tvos-focus-blue) !important;
+}
+
+.btn-outline-primary:hover {
+    background: var(--tvos-focus-blue) !important;
+    border-color: var(--tvos-focus-blue) !important;
+    color: white !important;
+    box-shadow: 0 0 20px rgba(10, 132, 255, 0.4) !important;
+}
+
+.btn-outline-primary.active {
+    background: var(--tvos-focus-blue) !important;
+    border-color: var(--tvos-focus-blue) !important;
+    color: white !important;
+    box-shadow: 0 0 15px rgba(10, 132, 255, 0.3) !important;
+}
+
+.form-control,
+.form-select {
+    background: var(--glass-thin) !important;
+    backdrop-filter: var(--tvos-blur-light) !important;
+    -webkit-backdrop-filter: var(--tvos-blur-light) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: var(--tvos-radius-medium) !important;
+    color: var(--letterboxd-text) !important;
+    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background: var(--glass-regular) !important;
+    border-color: var(--tvos-focus-blue) !important;
+    box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2) !important;
+}
+
+/* =========================================
+   PAGINATION - tvOS STYLE
+   ========================================= */
+
+.pagination .page-link {
+    background: var(--glass-regular) !important;
+    backdrop-filter: var(--tvos-blur-light) !important;
+    -webkit-backdrop-filter: var(--tvos-blur-light) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: var(--tvos-radius-medium) !important;
+    color: var(--letterboxd-text) !important;
+    margin: 0 4px !important;
+    padding: var(--tvos-spacing-xs) var(--tvos-spacing-sm) !important;
+    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
+}
+
+.pagination .page-link:hover {
+    background: var(--glass-thick) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+    transform: translateY(-1px) scale(1.05) !important;
+    box-shadow: var(--tvos-shadow-subtle) !important;
+}
+
+.pagination .page-item.active .page-link {
+    background: var(--tvos-focus-blue) !important;
+    border-color: var(--tvos-focus-blue) !important;
+    color: white !important;
+    box-shadow: 0 0 15px rgba(10, 132, 255, 0.4) !important;
+}
+
+/* =========================================
+   MODALS - tvOS SHEET STYLE
+   ========================================= */
+
+.modal-content {
+    background: var(--glass-thick) !important;
+    backdrop-filter: var(--tvos-blur-heavy) !important;
+    -webkit-backdrop-filter: var(--tvos-blur-heavy) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: var(--tvos-radius-xlarge) !important;
+    box-shadow: var(--tvos-shadow-focus) !important;
+}
+
+.modal-header {
+    background: var(--glass-regular) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: var(--tvos-radius-xlarge) var(--tvos-radius-xlarge) 0 0 !important;
+}
+
+.modal-body {
+    backdrop-filter: var(--tvos-blur-medium);
+    -webkit-backdrop-filter: var(--tvos-blur-medium);
+}
+
+/* =========================================
+   USER SELECTION - tvOS INTERFACE
+   ========================================= */
+
+.user-selection-card {
+    background: var(--glass-ultra-thick) !important;
+    backdrop-filter: var(--tvos-blur-heavy) !important;
+    -webkit-backdrop-filter: var(--tvos-blur-heavy) !important;
+    border: 2px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: var(--tvos-radius-xlarge) !important;
+    box-shadow: var(--tvos-shadow-focus) !important;
+}
+
+.user-select-btn,
+.user-switch-btn {
+    background: var(--glass-regular) !important;
+    backdrop-filter: var(--tvos-blur-light) !important;
+    -webkit-backdrop-filter: var(--tvos-blur-light) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: var(--tvos-radius-medium) !important;
+    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
+}
+
+.user-select-btn:hover,
+.user-switch-btn:hover {
+    background: var(--glass-thick) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow: var(--tvos-shadow-subtle) !important;
+}
+
+/* =========================================
+   TOOLTIPS - LIQUID GLASS STYLE
+   ========================================= */
+
+.tooltip .tooltip-inner {
+    background: var(--glass-thick) !important;
+    backdrop-filter: var(--tvos-blur-medium) !important;
+    -webkit-backdrop-filter: var(--tvos-blur-medium) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: var(--tvos-radius-medium) !important;
+    color: white !important;
+    font-weight: 500 !important;
+    box-shadow: var(--tvos-shadow-subtle) !important;
+}
+
+/* =========================================
+   ACTIVITY TIMELINE - tvOS GLOW EFFECTS
+   ========================================= */
+
+#recent-activity::before {
+    background: linear-gradient(180deg, 
+        var(--tvos-focus-blue), 
+        var(--tvos-focus-purple), 
+        var(--tvos-focus-pink)
+    ) !important;
+    box-shadow: 0 0 10px rgba(10, 132, 255, 0.5) !important;
+}
+
+.activity-item::before {
+    background: var(--tvos-focus-blue) !important;
+    box-shadow: 0 0 0 3px var(--glass-regular), 0 0 10px rgba(10, 132, 255, 0.4) !important;
+}
+
+.activity-item:nth-child(2)::before {
+    background: var(--tvos-focus-purple) !important;
+    box-shadow: 0 0 0 3px var(--glass-regular), 0 0 10px rgba(191, 90, 242, 0.4) !important;
+}
+
+.activity-item:nth-child(3)::before {
+    background: var(--tvos-focus-pink) !important;
+    box-shadow: 0 0 0 3px var(--glass-regular), 0 0 10px rgba(255, 45, 146, 0.4) !important;
+}
+
+/* =========================================
+   FAVORITE FILMS - tvOS GRID FOCUS
+   ========================================= */
+
+.favorite-film img {
+    border-radius: var(--tvos-radius-medium) !important;
+    border: 2px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: var(--tvos-shadow-float) !important;
+    transition: all var(--tvos-timing-focus) var(--tvos-ease-focus) !important;
+}
+
+.favorite-film:hover img {
+    transform: scale(var(--tvos-scale-medium)) translateY(-4px) !important;
+    border-color: rgba(10, 132, 255, 0.4) !important;
+    box-shadow: var(--tvos-shadow-focus), var(--tvos-shadow-glow) !important;
+}
+
+/* =========================================
+   FOOTER - MINIMAL GLASS OVERLAY
+   ========================================= */
+
+.footer {
+    background: var(--glass-thin) !important;
+    backdrop-filter: var(--tvos-blur-light) !important;
+    -webkit-backdrop-filter: var(--tvos-blur-light) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.footer-link {
+    color: var(--tvos-focus-blue) !important;
+    transition: all var(--tvos-timing-smooth) var(--tvos-ease-focus) !important;
+}
+
+.footer-link:hover {
+    color: var(--tvos-focus-purple) !important;
+    text-shadow: 0 0 8px rgba(191, 90, 242, 0.4) !important;
+}
+
+/* =========================================
+   RESPONSIVE ADJUSTMENTS
+   ========================================= */
+
+@media (max-width: 768px) {
+    /* Mobile optimizations for touch */
+    .movie-card:hover {
+        transform: translateY(-4px) scale(1.02) !important; /* Reduced scale for mobile */
+    }
+    
+    .stats-clickable:hover {
+        transform: translateY(-3px) scale(1.01) !important; /* Reduced scale for mobile */
+    }
+    
+    /* Reduce blur for performance on mobile */
+    .card {
+        backdrop-filter: var(--tvos-blur-light) !important;
+        -webkit-backdrop-filter: var(--tvos-blur-light) !important;
+    }
+    
+    .navbar {
+        backdrop-filter: var(--tvos-blur-light) !important;
+        -webkit-backdrop-filter: var(--tvos-blur-light) !important;
+    }
+}
+
+/* =========================================
+   REDUCED MOTION SUPPORT
+   ========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+    
+    .movie-card:hover,
+    .stats-card:hover,
+    .card:hover {
+        transform: none !important;
+    }
+}
+
+/* =========================================
+   HIGH CONTRAST MODE SUPPORT
+   ========================================= */
+
+@media (prefers-contrast: high) {
+    .card {
+        border: 2px solid rgba(255, 255, 255, 0.4) !important;
+    }
+    
+    .movie-card:hover {
+        border-color: var(--tvos-focus-blue) !important;
+    }
+    
+    .nav-link:focus {
+        outline: 3px solid var(--tvos-focus-blue) !important;
+        outline-offset: 2px;
+    }
+}
+
+/* =========================================
+   LOADING & SHIMMER EFFECTS
+   ========================================= */
+
+.loading-shimmer {
+    background: linear-gradient(
+        90deg,
+        var(--glass-thin) 0%,
+        var(--glass-regular) 20%,
+        var(--glass-thick) 40%,
+        var(--glass-regular) 60%,
+        var(--glass-thin) 100%
+    ) !important;
+    background-size: 200% 100%;
+    animation: liquidShimmer 2s ease-in-out infinite;
+}
+
+@keyframes liquidShimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* =========================================
+   FOCUS MANAGEMENT FOR ACCESSIBILITY
+   ========================================= */
+
+.movie-card:focus-visible,
+.stats-card:focus-visible,
+.btn:focus-visible {
+    outline: 3px solid var(--tvos-focus-blue) !important;
+    outline-offset: 3px;
+    border-color: var(--tvos-focus-blue) !important;
+}
+
+/* =========================================
+   PERFORMANCE OPTIMIZATIONS
+   ========================================= */
+
+.card,
+.movie-card,
+.stats-card,
+.nav-link,
+.btn {
+    will-change: transform, box-shadow;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+/* Ensure smooth 60fps animations */
+@supports (backdrop-filter: blur(1px)) {
+    .card,
+    .navbar,
+    .modal-content {
+        contain: layout style paint;
+    }
+}
