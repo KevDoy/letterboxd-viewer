@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSS Base64 Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>RSS Base64 Decoding Fix Test</h1>
+    
+    <div class="test-section info">
+        <h3>Test Status</h3>
+        <p>This page tests the RSS base64 decoding fix for the Letterboxd viewer.</p>
+        <button onclick="testRSSFetch()">Test RSS Fetch with kevdoy</button>
+        <button onclick="testWithDifferentUser()">Test with Different User</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script src="rss-manager.js"></script>
+    <script>
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(title, content, className = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-section ${className}`;
+            div.innerHTML = `<h3>${title}</h3>${content}`;
+            resultsDiv.appendChild(div);
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        async function testRSSFetch() {
+            const username = 'kevdoy';
+            addResult('Starting RSS Test', `Testing RSS fetch for user: ${username}`, 'info');
+
+            try {
+                console.log('=== RSS FETCH TEST START ===');
+                
+                // Initialize RSS manager
+                if (!window.letterboxdRSS) {
+                    throw new Error('RSS Manager not loaded');
+                }
+
+                const rssManager = window.letterboxdRSS;
+                rssManager.init(username, true);
+
+                addResult('RSS Manager Status', `
+                    <p>✓ RSS Manager loaded</p>
+                    <p>✓ Initialized with username: ${username}</p>
+                    <p>✓ Live data enabled: ${rssManager.isLiveDataAvailable()}</p>
+                `, 'success');
+
+                // Test RSS fetch
+                console.log('Fetching RSS data...');
+                const rssItems = await rssManager.fetchRSSFeed();
+
+                addResult('RSS Fetch Results', `
+                    <p><strong>Items found:</strong> ${rssItems.length}</p>
+                    <p><strong>Recent activities:</strong></p>
+                    <pre>${JSON.stringify(rssItems.slice(0, 3), null, 2)}</pre>
+                `, rssItems.length > 0 ? 'success' : 'error');
+
+                // Test diary entries
+                console.log('Getting diary entries...');
+                const diaryEntries = await rssManager.getRecentDiaryEntries(5);
+
+                addResult('Diary Entries', `
+                    <p><strong>Diary entries found:</strong> ${diaryEntries.length}</p>
+                    <pre>${JSON.stringify(diaryEntries, null, 2)}</pre>
+                `, diaryEntries.length > 0 ? 'success' : 'info');
+
+                // Test activity summary
+                console.log('Getting activity summary...');
+                const summary = await rssManager.getActivitySummary();
+
+                addResult('Activity Summary', `
+                    <p><strong>Activity summary:</strong></p>
+                    <pre>${JSON.stringify(summary, null, 2)}</pre>
+                `, summary ? 'success' : 'info');
+
+                console.log('=== RSS FETCH TEST COMPLETE ===');
+
+            } catch (error) {
+                console.error('RSS test failed:', error);
+                addResult('RSS Test Failed', `
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p><strong>Stack:</strong></p>
+                    <pre>${error.stack}</pre>
+                `, 'error');
+            }
+        }
+
+        async function testWithDifferentUser() {
+            const username = prompt('Enter Letterboxd username to test:', 'kevdoy');
+            if (!username) return;
+
+            addResult('Testing Different User', `Testing RSS fetch for user: ${username}`, 'info');
+
+            try {
+                const rssManager = window.letterboxdRSS;
+                rssManager.init(username, true);
+
+                const rssItems = await rssManager.fetchRSSFeed();
+                addResult(`Results for ${username}`, `
+                    <p><strong>Items found:</strong> ${rssItems.length}</p>
+                    <p><strong>Sample items:</strong></p>
+                    <pre>${JSON.stringify(rssItems.slice(0, 2), null, 2)}</pre>
+                `, rssItems.length > 0 ? 'success' : 'error');
+
+            } catch (error) {
+                addResult(`Test Failed for ${username}`, `
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `, 'error');
+            }
+        }
+
+        // Auto-run test on page load
+        window.addEventListener('load', () => {
+            addResult('Page Loaded', 'RSS Base64 Fix Test page loaded successfully. Click "Test RSS Fetch" to begin.', 'info');
+        });
+    </script>
+</body>
+</html>

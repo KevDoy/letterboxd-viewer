@@ -5,6 +5,8 @@
       "displayName": "SampleUser",
       "folder": "SampleUser",
       "lastUpdated": "2025-07-31",
+      "enableLiveData": true,
+      "letterboxdUsername": "ghosteffect",
       "lists": [
         "official-top-10-films-with-the-most-fans.csv"
       ]

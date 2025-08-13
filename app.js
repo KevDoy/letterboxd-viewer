@@ -489,6 +489,37 @@ class LetterboxdViewer {
                 return film;
             }).filter(Boolean);
         }
+        
+        // Initialize RSS live data if enabled
+        this.initializeLiveData();
+    }
+    
+    // RSS Live Data Integration
+    initializeLiveData() {
+        const liveDataToggle = document.getElementById('live-data-toggle');
+        const liveDataSwitch = document.getElementById('liveDataSwitch');
+        
+        if (!this.currentUser || !liveDataToggle || !liveDataSwitch) {
+            return;
+        }
+        
+        // Check if live data is enabled for this user
+        const enableLiveData = this.currentUser.enableLiveData === true;
+        const username = this.currentUser.letterboxdUsername || this.currentUser.id;
+        
+        if (enableLiveData && username) {
+            // Show the toggle
+            liveDataToggle.classList.remove('d-none');
+            
+            // Initialize RSS manager
+            window.letterboxdRSS.init(username, enableLiveData);
+            
+            // Set initial state
+            liveDataSwitch.checked = false; // Default to off
+        } else {
+            // Hide the toggle
+            liveDataToggle.classList.add('d-none');
+        }
     }
     
     findFilmByUrl(url) {
@@ -917,9 +948,30 @@ class LetterboxdViewer {
     
     async renderRecentActivity() {
         const recentContainer = document.getElementById('recent-activity');
+        
+        // Combine CSV diary data with live RSS data if enabled
+        let diaryData = [...this.data.diary];
+        
+        // Check if live data is enabled
+        const liveDataSwitch = document.getElementById('liveDataSwitch');
+        if (liveDataSwitch && liveDataSwitch.checked && window.letterboxdRSS && window.letterboxdRSS.isLiveDataAvailable()) {
+            try {
+                const liveEntries = await window.letterboxdRSS.getRecentDiaryEntries(10);
+                // Use smart merging to avoid duplicates and only show newer entries
+                diaryData = this.mergeLiveDataWithCSV(this.data.diary, liveEntries, {
+                    maxLiveEntries: 10,
+                    onlyNewerThanLatest: true,
+                    strictDuplicateCheck: true
+                });
+                console.log(`Recent activity: merged data now has ${diaryData.length} entries`);
+            } catch (error) {
+                console.warn('Failed to fetch live activity entries:', error);
+            }
+        }
+        
         // Sort by date descending (newest first), then slice
-        const recentEntries = [...this.data.diary]
-            .sort((a, b) => new Date(b.Date) - new Date(a.Date))
+        const recentEntries = [...diaryData]
+            .sort((a, b) => new Date(b.Date || b.WatchedDate) - new Date(a.Date || a.WatchedDate))
             .slice(0, 5);
         
         if (recentEntries.length === 0) {
@@ -931,30 +983,34 @@ class LetterboxdViewer {
         for (const entry of recentEntries) {
             const rating = this.formatStarRating(entry.Rating);
             const rewatch = entry.Rewatch === 'Yes' ? '<span class="badge bg-info">Rewatch</span>' : '';
+            const isLiveData = entry.isLiveData === true;
+            const liveBadge = isLiveData ? '<i class="bi bi-rss text-success ms-1" title="Live Data"></i>' : '';
+            const watchDate = entry.Date || entry.WatchedDate;
             
             html += `
                 <div class="activity-item">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <strong class="activity-title">${entry.Name}</strong> <span class="activity-year">(${entry.Year})</span>
+                            <strong class="activity-title">${entry.Name}</strong> <span class="activity-year">(${entry.Year})</span>${liveBadge}
                             <div class="activity-meta">
                                 ${rating && `<span class="star-rating">${rating}</span>`}
                                 ${rewatch}
                                 ${entry.Tags ? `<span class="tag">${entry.Tags}</span>` : ''}
                             </div>
                         </div>
-                        <small class="activity-date">${new Date(entry.Date).toLocaleDateString()}</small>
+                        <small class="activity-date">${watchDate ? new Date(watchDate).toLocaleDateString() : 'Recently'}</small>
                     </div>
                 </div>
             `;
         }
         
         // Add "View More" link if there are more entries
-        if (this.data.diary.length > 5) {
+        const totalEntries = diaryData.length;
+        if (totalEntries > 5) {
             html += `
                 <div class="text-center mt-3">
                     <a href="#" onclick="app.showDiary()" class="btn btn-outline-primary btn-sm">
-                        View All Activity (${this.data.diary.length} total)
+                        View All Activity (${totalEntries} total)
                     </a>
                 </div>
             `;
@@ -1021,16 +1077,38 @@ class LetterboxdViewer {
         const container = document.getElementById('diary-content');
         const paginationContainer = document.getElementById('diary-pagination');
         
-        if (this.data.diary.length === 0) {
-            container.innerHTML = '<div class="col-12"><p class="text-muted">No diary entries found.</p></div>';
-            paginationContainer.innerHTML = '';
-            return;
-        }
-        
         // Show loading indicator
         this.showSectionLoading('diary');
         
-        const sortedData = this.sortData(this.data.diary, this.pagination.diary);
+        // Combine CSV diary data with live RSS data if enabled
+        // Combine CSV diary data with live RSS data if enabled
+        let diaryData = [...this.data.diary];
+        
+        // Check if live data is enabled
+        const liveDataSwitch = document.getElementById('liveDataSwitch');
+        if (liveDataSwitch && liveDataSwitch.checked && window.letterboxdRSS && window.letterboxdRSS.isLiveDataAvailable()) {
+            try {
+                const liveEntries = await window.letterboxdRSS.getRecentDiaryEntries(50); // More entries for diary view
+                // Use smart merging to avoid duplicates and only show newer entries
+                diaryData = this.mergeLiveDataWithCSV(this.data.diary, liveEntries, {
+                    maxLiveEntries: 50,
+                    onlyNewerThanLatest: true,
+                    strictDuplicateCheck: true
+                });
+                console.log(`Diary view: merged data now has ${diaryData.length} entries`);
+            } catch (error) {
+                console.warn('Failed to fetch live diary entries:', error);
+            }
+        }
+        
+        if (diaryData.length === 0) {
+            container.innerHTML = '<div class="col-12"><p class="text-muted">No diary entries found.</p></div>';
+            paginationContainer.innerHTML = '';
+            this.hideSectionLoading('diary');
+            return;
+        }
+        
+        const sortedData = this.sortData(diaryData, this.pagination.diary);
         const paginatedData = this.paginateData(sortedData, this.pagination.diary);
         
         let html = '';
@@ -1360,22 +1438,25 @@ class LetterboxdViewer {
         const rating = this.formatStarRating(film.Rating);
         const rewatch = film.Rewatch === 'Yes' ? '<span class="badge bg-info">Rewatch</span>' : '';
         const tags = film.Tags ? film.Tags.split(',').map(tag => `<span class="tag">${tag.trim()}</span>`).join('') : '';
+        const isLiveData = film.isLiveData === true;
+        const liveBadge = isLiveData ? '<span class="badge bg-success ms-1"><i class="bi bi-rss"></i> Live</span>' : '';
         
         return `
             <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
                 <div class="card movie-card" onclick="window.open('${tmdbUrl}', '_blank')">
                     <div class="movie-poster-container">
                         <img src="${posterUrl}" class="movie-poster" alt="${film.Name}" loading="lazy">
+                        ${isLiveData ? '<div class="live-data-indicator"><i class="bi bi-rss"></i></div>' : ''}
                     </div>
                     <div class="card-body">
-                        <h6 class="movie-title">${film.Name}</h6>
+                        <h6 class="movie-title">${film.Name}${liveBadge}</h6>
                         <p class="movie-year mb-2">${film.Year}</p>
                         ${showDiaryInfo ? `
                             <div class="movie-meta">
                                 ${rating && `<div class="star-rating mb-1">${rating}</div>`}
                                 ${rewatch}
                                 ${tags}
-                                ${film.Date ? `<small class="text-muted d-block mt-2">Watched: ${new Date(film.Date).toLocaleDateString()}</small>` : ''}
+                                ${film.Date || film.WatchedDate ? `<small class="text-muted d-block mt-2">Watched: ${new Date(film.Date || film.WatchedDate).toLocaleDateString()}</small>` : ''}
                             </div>
                         ` : ''}
                     </div>
@@ -1920,6 +2001,132 @@ class LetterboxdViewer {
         }
     }
     
+    // Smart Live Data Merging Functions
+    
+    /**
+     * Merge live RSS data with CSV data, avoiding duplicates intelligently
+     */
+    mergeLiveDataWithCSV(csvData, liveData, options = {}) {
+        if (!liveData || liveData.length === 0) {
+            return csvData;
+        }
+        
+        const { 
+            maxLiveEntries = 20, 
+            onlyNewerThanLatest = true,
+            strictDuplicateCheck = true 
+        } = options;
+        
+        console.log(`Merging ${csvData.length} CSV entries with ${liveData.length} live entries`);
+        
+        // Find the latest date in CSV data
+        let latestCSVDate = null;
+        if (onlyNewerThanLatest && csvData.length > 0) {
+            const dates = csvData
+                .map(entry => entry.Date || entry.WatchedDate || entry['Watched Date'])
+                .filter(date => date)
+                .map(date => new Date(date))
+                .filter(date => !isNaN(date));
+            
+            if (dates.length > 0) {
+                latestCSVDate = new Date(Math.max(...dates));
+                console.log('Latest CSV date found:', latestCSVDate.toISOString().split('T')[0]);
+            }
+        }
+        
+        // Filter live data to only include entries newer than latest CSV entry
+        let filteredLiveData = liveData;
+        if (latestCSVDate) {
+            filteredLiveData = liveData.filter(entry => {
+                const entryDate = new Date(entry.WatchedDate || entry.Date);
+                return entryDate > latestCSVDate;
+            });
+            console.log(`Filtered to ${filteredLiveData.length} live entries newer than ${latestCSVDate.toISOString().split('T')[0]}`);
+        }
+        
+        // If no new live entries, return original CSV data
+        if (filteredLiveData.length === 0) {
+            console.log('No new live entries to merge');
+            return csvData;
+        }
+        
+        // Limit the number of live entries
+        filteredLiveData = filteredLiveData.slice(0, maxLiveEntries);
+        
+        // Smart duplicate detection
+        const processedLiveData = this.removeDuplicates(csvData, filteredLiveData, strictDuplicateCheck);
+        
+        console.log(`Final merge: ${processedLiveData.length} new live entries added`);
+        
+        // Merge and sort by date (newest first)
+        const mergedData = [...processedLiveData, ...csvData];
+        return mergedData.sort((a, b) => {
+            const dateA = new Date(a.Date || a.WatchedDate || a['Watched Date']);
+            const dateB = new Date(b.Date || b.WatchedDate || b['Watched Date']);
+            return dateB - dateA;
+        });
+    }
+    
+    /**
+     * Remove duplicates using multiple detection strategies
+     */
+    removeDuplicates(csvData, liveData, strictCheck = true) {
+        if (!strictCheck) {
+            // Simple URI-based deduplication (original method)
+            const existingUrls = new Set(csvData.map(entry => entry['Letterboxd URI'] || entry.LetterboxdURI));
+            return liveData.filter(entry => !existingUrls.has(entry.LetterboxdURI || entry['Letterboxd URI']));
+        }
+        
+        // Advanced duplicate detection using multiple criteria
+        const duplicateKeys = new Set();
+        
+        // Build keys for existing CSV data
+        csvData.forEach(entry => {
+            const keys = this.generateDuplicateKeys(entry);
+            keys.forEach(key => duplicateKeys.add(key));
+        });
+        
+        // Filter live data against these keys
+        return liveData.filter(entry => {
+            const keys = this.generateDuplicateKeys(entry);
+            return !keys.some(key => duplicateKeys.has(key));
+        });
+    }
+    
+    /**
+     * Generate multiple keys for duplicate detection
+     */
+    generateDuplicateKeys(entry) {
+        const keys = [];
+        
+        const title = (entry.Name || entry.title || '').trim().toLowerCase();
+        const year = entry.Year || entry.year;
+        const date = entry.Date || entry.WatchedDate || entry['Watched Date'];
+        const uri = entry['Letterboxd URI'] || entry.LetterboxdURI;
+        
+        // Key 1: URI (if available)
+        if (uri) {
+            keys.push(`uri:${uri}`);
+        }
+        
+        // Key 2: Title + Year
+        if (title && year) {
+            keys.push(`title_year:${title}|${year}`);
+        }
+        
+        // Key 3: Title + Date (for same-day watches)
+        if (title && date) {
+            keys.push(`title_date:${title}|${date}`);
+        }
+        
+        // Key 4: Title only (loose matching)
+        if (title) {
+            keys.push(`title:${title}`);
+        }
+        
+        return keys;
+    }
+
     // ...existing code...
 }
 
@@ -1964,8 +2171,104 @@ function showLists() {
 }
 function showUserSwitcher() { app.showUserSwitcher(); }
 
-// Initialize the app when the page loads
-let app;
+// RSS Live Data Toggle Function
+async function toggleLiveData() {
+    const liveDataSwitch = document.getElementById('liveDataSwitch');
+    const isEnabled = liveDataSwitch.checked;
+    
+    if (isEnabled) {
+        console.log('Enabling live data from RSS...');
+        
+        // Test RSS connectivity first
+        const connectivitySuccess = await testRSSConnectivity();
+        
+        if (connectivitySuccess) {
+            // If connectivity test passed, refresh the view to show live data
+            console.log('RSS connectivity confirmed, refreshing view with live data...');
+            refreshCurrentView();
+        } else {
+            // If connectivity failed, disable the toggle
+            console.log('RSS connectivity failed, disabling toggle...');
+            liveDataSwitch.checked = false;
+        }
+    } else {
+        console.log('Disabling live data...');
+        // Clear any cached RSS data
+        if (window.letterboxdRSS) {
+            window.letterboxdRSS.clearCache();
+        }
+        // Refresh current view to show only CSV data
+        refreshCurrentView();
+    }
+}
+
+// Test RSS connectivity and show user feedback
+async function testRSSConnectivity() {
+    const username = window.viewer?.currentUser?.letterboxdUsername || window.viewer?.currentUser?.id;
+    
+    if (!username || !window.letterboxdRSS) {
+        window.viewer?.showToast('Error: RSS manager not available', 'error');
+        document.getElementById('liveDataSwitch').checked = false;
+        return false;
+    }
+    
+    // Show loading state
+    window.viewer?.showToast('Testing RSS connection...', 'info');
+    
+    try {
+        const hasRSSAccess = await window.letterboxdRSS.testRSSAccess(username);
+        
+        if (hasRSSAccess) {
+            window.viewer?.showToast('Live data enabled! RSS feed connected successfully.', 'success');
+            return true;
+        } else {
+            window.viewer?.showToast(`No RSS feed found for user "${username}". Please check the username.`, 'warning');
+            document.getElementById('liveDataSwitch').checked = false;
+            return false;
+        }
+    } catch (error) {
+        console.error('RSS connectivity test failed:', error);
+        window.viewer?.showToast('Failed to connect to RSS feed. Please try again later.', 'error');
+        document.getElementById('liveDataSwitch').checked = false;
+        return false;
+    }
+}
+
+// Refresh the current view (rerun the current section's display function)
+function refreshCurrentView() {
+    if (!window.viewer) return;
+    
+    const currentSection = window.viewer.currentSection;
+    
+    switch (currentSection) {
+        case 'dashboard':
+                       window.viewer.showDashboard();
+            break;
+        case 'diary':
+            window.viewer.showDiary();
+            break;
+        case 'allFilms':
+            window.viewer.showAllFilms();
+            break;
+        case 'watchlist':
+            window.viewer.showWatchlist();
+            break;
+        case 'reviews':
+            window.viewer.showReviews();
+            break;
+        case 'lists':
+            window.viewer.showLists();
+            break;
+        default:
+            console.log('Unknown section:', currentSection);
+    }
+}
+
+// Initialize the application
+const app = new LetterboxdViewer();
+window.viewer = app; // Make accessible to RSS functions
+
+// Start the application when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    app = new LetterboxdViewer();
+    app.init();
 });

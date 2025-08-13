@@ -175,6 +175,28 @@ body {
     padding: 1px 6px;
 }
 
+/* Live Data Indicator */
+.live-data-indicator {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(25, 135, 84, 0.9);
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    z-index: 2;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.live-data-indicator i {
+    font-size: 0.7rem;
+}
+
 /* Review Cards */
 .review-card {
     border: none;
