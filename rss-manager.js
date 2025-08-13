@@ -206,62 +206,104 @@ class LetterboxdRSSManager {
      */
     extractFilmInfo(title, link, description) {
         // Extract film title from the title string
-        // Letterboxd RSS titles can vary, so try multiple patterns
-        const patterns = [
-            // Standard patterns: "Username watched Film Title ★★★★"
-            /watched (.+?)(?:\s+★+)?(?:\s+\(\d{4}\))?$/,
-            /reviewed (.+?)(?:\s+★+)?(?:\s+\(\d{4}\))?$/,
-            /liked (.+?)(?:\s+★+)?(?:\s+\(\d{4}\))?$/,
-            // More flexible patterns
-            /^[^\s]+\s+(.+?)(?:\s+★+)?(?:\s+\(\d{4}\))?$/, // Username + anything
-            /^[^\s]+\s+\w+\s+(.+?)(?:\s+★+)?(?:\s+\(\d{4}\))?$/, // Username + verb + film
-            /^.+?\s+(.+?)(?:\s+★+)?(?:\s+\(\d{4}\))?$/ // Any word + film title
-        ];
-
+        // Your RSS format: "ghosteffect A Minecraft Movie, 2025 - â˜…â˜…â˜…"
         let filmTitle = null;
         let year = null;
         let rating = null;
 
-        // Try each pattern until we find a match
-        for (const pattern of patterns) {
-            const match = title.match(pattern);
-            if (match && match[1] && match[1].trim().length > 0) {
-                filmTitle = match[1].trim();
-                break;
+        // Clean up encoded characters first
+        const cleanTitle = title
+            .replace(/â˜…/g, '★') // Fix encoded stars
+            .replace(/â€™/g, "'") // Fix encoded apostrophes
+            .replace(/â€œ/g, '"') // Fix encoded quotes
+            .replace(/â€/g, '"')
+            .replace(/â/g, '') // Remove broken encoding artifacts
+            .trim();
+
+        console.log('Original title:', title);
+        console.log('Cleaned title:', cleanTitle);
+
+        // Pattern for your RSS format: "username FilmTitle, Year - ★★★"
+        const mainPattern = /^[^\s]+\s+(.+?),\s*(\d{4})\s*-\s*(★*)$/;
+        const match = cleanTitle.match(mainPattern);
+
+        if (match) {
+            filmTitle = match[1].trim();
+            year = parseInt(match[2]);
+            rating = match[3] ? match[3].length : null;
+            
+            console.log('Pattern match success:', { filmTitle, year, rating });
+        } else {
+            // Try alternative pattern without the dash and stars
+            const altPattern = /^[^\s]+\s+(.+?),\s*(\d{4}).*$/;
+            const altMatch = cleanTitle.match(altPattern);
+            
+            if (altMatch) {
+                filmTitle = altMatch[1].trim();
+                year = parseInt(altMatch[2]);
+                
+                // Extract stars separately
+                const starMatch = cleanTitle.match(/★+/);
+                if (starMatch) {
+                    rating = starMatch[0].length;
+                }
+                
+                console.log('Alternative pattern match:', { filmTitle, year, rating });
+            } else {
+                // Fallback: try to extract just the film title after username
+                const words = cleanTitle.split(' ');
+                if (words.length > 1) {
+                    // Remove username (first word)
+                    let titlePart = words.slice(1).join(' ');
+                    
+                    // Remove year and everything after it
+                    titlePart = titlePart.replace(/,\s*\d{4}.*$/, '');
+                    
+                    // Clean up any remaining artifacts
+                    titlePart = titlePart.replace(/[★\-\,\s]+$/, '').trim();
+                    
+                    if (titlePart.length > 0) {
+                        filmTitle = titlePart;
+                    }
+                }
+
+                // Extract year from anywhere in the title
+                const yearMatch = cleanTitle.match(/(\d{4})/);
+                if (yearMatch) {
+                    year = parseInt(yearMatch[1]);
+                }
+
+                // Extract star rating from anywhere in the title
+                const starMatch = cleanTitle.match(/★+/);
+                if (starMatch) {
+                    rating = starMatch[0].length;
+                }
+
+                console.log('Fallback extraction:', { filmTitle, year, rating });
             }
         }
 
-        // If no pattern matched, try to extract from the link or use the full title
-        if (!filmTitle) {
-            // Try to extract from Letterboxd link
+        // If still no title, try to extract from the link
+        if (!filmTitle || filmTitle.length === 0) {
             const linkMatch = link.match(/\/film\/([^\/]+)\//);
             if (linkMatch) {
                 // Convert URL slug to title
                 filmTitle = linkMatch[1]
                     .replace(/-/g, ' ')
                     .replace(/\b\w/g, l => l.toUpperCase());
-            } else {
-                // Last resort: use title after removing username (assume first word is username)
-                const words = title.split(' ');
-                if (words.length > 1) {
-                    filmTitle = words.slice(1).join(' ');
-                    // Clean up stars and year from the end
-                    filmTitle = filmTitle.replace(/\s+★+\s*$/, '');
-                    filmTitle = filmTitle.replace(/\s+\(\d{4}\)\s*$/, '');
-                }
+                console.log('Link extraction:', filmTitle);
             }
         }
 
-        // Extract star rating from title
-        const starMatch = title.match(/★+/);
-        if (starMatch) {
-            rating = starMatch[0].length; // Count the stars
-        }
-
-        // Try to extract year from description or title
-        const yearMatch = (title + ' ' + description).match(/\((\d{4})\)/);
-        if (yearMatch) {
-            year = parseInt(yearMatch[1]);
+        // Final validation - don't return entries with just numbers or invalid titles
+        if (!filmTitle || filmTitle.match(/^\d+$/) || filmTitle.length < 2) {
+            console.log('Invalid title detected, skipping:', filmTitle);
+            return {
+                title: null,
+                year: year,
+                rating: rating,
+                letterboxdUrl: link
+            };
         }
 
         return {
@@ -282,22 +324,35 @@ class LetterboxdRSSManager {
 
         try {
             const rssItems = await this.fetchRSSFeed();
-            return rssItems
-                .slice(0, limit) // Take all recent activity, not just "diary" type
-                .map(item => ({
-                    Name: item.filmInfo.title || 'Unknown',
-                    Year: item.filmInfo.year || '',
-                    LetterboxdURI: item.filmInfo.letterboxdUrl || '',
-                    'Letterboxd URI': item.filmInfo.letterboxdUrl || '',
-                    WatchedDate: item.pubDate.toISOString().split('T')[0], // YYYY-MM-DD format
-                    'Watched Date': item.pubDate.toISOString().split('T')[0],
-                    Date: item.pubDate.toISOString().split('T')[0],
-                    Rating: item.filmInfo.rating ? item.filmInfo.rating.toString() : '', // Convert to string for consistency
-                    Rewatch: 'No', // Default assumption
-                    Tags: 'live-data', // Tag to identify live data
-                    isLiveData: true,
-                    _isFromRSS: true
-                }));
+            const validEntries = rssItems
+                .slice(0, limit * 2) // Get more items to account for filtering
+                .map(item => {
+                    // Convert to diary format and validate
+                    const filmInfo = item.filmInfo || {};
+                    if (!filmInfo.title || filmInfo.title.trim().length === 0) {
+                        return null; // Skip invalid entries
+                    }
+                    
+                    return {
+                        Name: filmInfo.title,
+                        Year: filmInfo.year || '',
+                        LetterboxdURI: filmInfo.letterboxdUrl || '',
+                        'Letterboxd URI': filmInfo.letterboxdUrl || '',
+                        WatchedDate: item.pubDate.toISOString().split('T')[0], // YYYY-MM-DD format
+                        'Watched Date': item.pubDate.toISOString().split('T')[0],
+                        Date: item.pubDate.toISOString().split('T')[0],
+                        Rating: filmInfo.rating ? filmInfo.rating.toString() : '', // Convert to string for consistency
+                        Rewatch: 'No', // Default assumption
+                        Tags: 'live-data', // Tag to identify live data
+                        isLiveData: true,
+                        _isFromRSS: true
+                    };
+                })
+                .filter(entry => entry !== null) // Remove null entries
+                .slice(0, limit); // Take only the requested number
+                
+            console.log(`Returning ${validEntries.length} valid recent diary entries`);
+            return validEntries;
         } catch (error) {
             console.warn('Failed to get recent diary entries:', error);
             return [];
@@ -316,14 +371,22 @@ class LetterboxdRSSManager {
             const rssItems = await this.fetchRSSFeed();
             const sinceDateObj = new Date(sinceDate);
             
-            return rssItems
+            const entries = rssItems
                 .filter(item => {
                     // Accept all RSS activity as potential diary entries
-                    // Filter by date only
+                    // Filter by date only - must be AFTER the latest CSV date
                     const itemDate = new Date(item.pubDate);
-                    return itemDate > sinceDateObj;
+                    const isNewer = itemDate > sinceDateObj;
+                    
+                    console.log(`Date comparison: ${item.pubDate.toISOString()} > ${sinceDateObj.toISOString()} = ${isNewer}`);
+                    
+                    return isNewer;
                 })
-                .map(item => this.convertRSSItemToDiaryFormat(item));
+                .map(item => this.convertRSSItemToDiaryFormat(item))
+                .filter(entry => entry !== null); // Remove null entries
+                
+            console.log(`Filtered ${entries.length} valid diary entries from RSS`);
+            return entries;
         } catch (error) {
             console.error('Failed to get diary entries since date:', error);
             return [];
@@ -337,9 +400,18 @@ class LetterboxdRSSManager {
         const filmInfo = rssItem.filmInfo || {};
         const watchedDate = new Date(rssItem.pubDate);
         
+        // Skip entries without valid film titles
+        if (!filmInfo.title || 
+            filmInfo.title.trim().length === 0 || 
+            filmInfo.title.match(/^\d+$/) || // Skip entries that are just numbers
+            filmInfo.title.length < 2) { // Skip very short titles
+            console.log('Skipping RSS item without valid title:', rssItem.title, 'extracted:', filmInfo.title);
+            return null;
+        }
+        
         return {
             'Date': this.formatDateForCSV(watchedDate),
-            'Name': filmInfo.title || 'Unknown Film',
+            'Name': filmInfo.title,
             'Year': filmInfo.year || '',
             'Letterboxd URI': filmInfo.letterboxdUrl || '',
             'Rating': filmInfo.rating ? filmInfo.rating.toString() : '', // Convert to string for consistency
