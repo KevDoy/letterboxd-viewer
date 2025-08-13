@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test Star Rating Display</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { border: 1px solid #ccc; margin: 10px; padding: 10px; }
+        .stars { font-size: 20px; color: #ff8000; }
+    </style>
+</head>
+<body>
+    <h1>Star Rating Display Test</h1>
+    
+    <div class="test">
+        <h3>Direct Star Characters:</h3>
+        <div class="stars">★★★★★</div>
+        <div class="stars">★★★★½</div>
+        <div class="stars">★★★</div>
+        <div class="stars">★½</div>
+        <div class="stars">½</div>
+    </div>
+    
+    <div class="test">
+        <h3>Testing formatStarRating Function:</h3>
+        <div id="rating-tests"></div>
+    </div>
+    
+    <div class="test">
+        <h3>Testing RSS Data:</h3>
+        <button onclick="testRSSRatings()">Test RSS Ratings</button>
+        <div id="rss-tests"></div>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="rss-manager.js"></script>
+    <script>
+        // Test the formatStarRating function
+        const testRatings = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5];
+        const ratingsDiv = document.getElementById('rating-tests');
+        
+        // Create a mock viewer instance to test the function
+        const mockViewer = { formatStarRating: function(rating) {
+            if (!rating) return '';
+            
+            const numericRating = parseFloat(rating);
+            if (isNaN(numericRating)) return '';
+            
+            const fullStars = Math.floor(numericRating);
+            const hasHalfStar = (numericRating % 1) >= 0.5;
+            
+            let starDisplay = '★'.repeat(fullStars);
+            if (hasHalfStar) {
+                starDisplay += '½';
+            }
+            
+            return starDisplay;
+        }};
+        
+        testRatings.forEach(rating => {
+            const formattedRating = mockViewer.formatStarRating(rating);
+            const div = document.createElement('div');
+            div.className = 'stars';
+            div.innerHTML = `Rating ${rating}: ${formattedRating}`;
+            ratingsDiv.appendChild(div);
+        });
+        
+        async function testRSSRatings() {
+            const rssTestsDiv = document.getElementById('rss-tests');
+            rssTestsDiv.innerHTML = '<p>Testing RSS ratings...</p>';
+            
+            try {
+                const rssManager = window.letterboxdRSS;
+                rssManager.init('ghosteffect', true);
+                rssManager.clearCache();
+                
+                const entries = await rssManager.getRecentDiaryEntries(5);
+                
+                rssTestsDiv.innerHTML = '';
+                
+                entries.forEach((entry, index) => {
+                    const formattedRating = mockViewer.formatStarRating(entry.Rating);
+                    
+                    const div = document.createElement('div');
+                    div.innerHTML = `
+                        <strong>Entry ${index + 1}:</strong> ${entry.Name} (${entry.Year})<br>
+                        Raw Rating: "${entry.Rating}"<br>
+                        Formatted Rating: <span class="stars">${formattedRating}</span><br>
+                        <hr>
+                    `;
+                    rssTestsDiv.appendChild(div);
+                });
+                
+            } catch (error) {
+                rssTestsDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug RSS Merging Logic</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { border: 1px solid #ccc; padding: 15px; margin: 15px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .entry { border: 1px solid #ddd; margin: 5px 0; padding: 10px; border-radius: 3px; }
+        .rss-entry { background-color: #e8f5e8; }
+        .csv-entry { background-color: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <h1>Debug RSS Merging Logic for ghosteffect</h1>
+    <button onclick="debugMerging()">Debug Merging Process</button>
+    <button onclick="clearResults()">Clear</button>
+    
+    <div id="results"></div>
+
+    <script src="rss-manager.js"></script>
+    <script>
+        function log(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `debug-section ${type}`;
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function debugMerging() {
+            clearResults();
+            log('🔧 Starting RSS merging debug for ghosteffect...', 'info');
+
+            try {
+                // Initialize RSS manager
+                const rssManager = new LetterboxdRSSManager();
+                window.letterboxdRSS = rssManager;
+                rssManager.init('ghosteffect', true);
+                
+                log('✅ RSS Manager initialized', 'success');
+
+                // Step 1: Test RSS access and fetch
+                log('📡 Step 1: Testing RSS access and data fetch...', 'info');
+                const hasAccess = await rssManager.testRSSAccess('ghosteffect');
+                if (!hasAccess) {
+                    log('❌ Cannot access RSS feed for ghosteffect', 'error');
+                    return;
+                }
+                log('✅ RSS access confirmed', 'success');
+
+                // Fetch raw RSS items
+                const rssItems = await rssManager.fetchRSSFeed();
+                log(`✅ Fetched ${rssItems.length} raw RSS items`, 'success');
+
+                // Step 2: Analyze activity types
+                log('🔍 Step 2: Analyzing activity types...', 'info');
+                const activityBreakdown = {};
+                rssItems.forEach(item => {
+                    activityBreakdown[item.activityType] = (activityBreakdown[item.activityType] || 0) + 1;
+                });
+                log(`Activity breakdown: <pre>${JSON.stringify(activityBreakdown, null, 2)}</pre>`, 'info');
+
+                const diaryItems = rssItems.filter(item => item.activityType === 'diary');
+                log(`📔 Found ${diaryItems.length} diary entries in RSS`, diaryItems.length > 0 ? 'success' : 'warning');
+
+                if (diaryItems.length > 0) {
+                    log('Sample diary entries:', 'info');
+                    diaryItems.slice(0, 3).forEach((item, index) => {
+                        log(`<div class="entry rss-entry">
+                            <strong>Diary Entry ${index + 1}:</strong><br>
+                            Title: ${item.title}<br>
+                            Film: ${item.filmInfo.title} (${item.filmInfo.year})<br>
+                            Date: ${item.pubDate.toISOString()}<br>
+                            Rating: ${item.filmInfo.rating || 'No rating'}
+                        </div>`, 'info');
+                    });
+                }
+
+                // Step 3: Simulate CSV data (your latest entries)
+                log('📊 Step 3: Creating simulated CSV data...', 'info');
+                const mockCSVData = [
+                    {
+                        'Name': 'Anora',
+                        'Year': '2024',
+                        'Watched Date': '2025-08-01',
+                        'Letterboxd URI': 'https://boxd.it/ayD2et',
+                        'Rating': '3.5'
+                    },
+                    {
+                        'Name': 'Happy Gilmore 2',
+                        'Year': '2025',
+                        'Watched Date': '2025-07-26',
+                        'Letterboxd URI': 'https://boxd.it/atVAXt',
+                        'Rating': '3'
+                    }
+                ];
+                log(`Created ${mockCSVData.length} mock CSV entries (latest: 2025-08-01)`, 'info');
+
+                // Step 4: Test date filtering
+                log('📅 Step 4: Testing date filtering logic...', 'info');
+                const latestCSVDate = new Date('2025-08-01');
+                log(`Looking for RSS entries newer than: ${latestCSVDate.toISOString()}`, 'info');
+
+                const newRSSEntries = await rssManager.getDiaryEntriesSince(latestCSVDate);
+                log(`🆕 getDiaryEntriesSince returned: ${newRSSEntries.length} entries`, 
+                    newRSSEntries.length > 0 ? 'success' : 'warning');
+
+                if (newRSSEntries.length > 0) {
+                    log('New RSS entries found:', 'success');
+                    newRSSEntries.forEach((entry, index) => {
+                        log(`<div class="entry rss-entry">
+                            <strong>New Entry ${index + 1}:</strong><br>
+                            Name: ${entry.Name}<br>
+                            Year: ${entry.Year}<br>
+                            Watched Date: ${entry['Watched Date']}<br>
+                            Rating: ${entry.Rating}<br>
+                            Is Live Data: ${entry.isLiveData}
+                        </div>`, 'success');
+                    });
+                } else {
+                    log('❌ No new RSS entries found. This could mean:', 'warning');
+                    log(`
+                        <ul>
+                            <li>No new films watched since 2025-08-01</li>
+                            <li>RSS feed hasn't updated yet</li>
+                            <li>Activity type detection is failing</li>
+                            <li>Date comparison is incorrect</li>
+                        </ul>
+                    `, 'warning');
+
+                    // Debug the date comparison
+                    log('🔍 Debugging date comparison...', 'info');
+                    diaryItems.forEach((item, index) => {
+                        const itemDate = new Date(item.pubDate);
+                        const isNewer = itemDate > latestCSVDate;
+                        log(`Diary ${index + 1}: ${item.filmInfo.title} - ${itemDate.toISOString()} - ${isNewer ? 'NEWER' : 'OLDER'}`, 
+                            isNewer ? 'success' : 'info');
+                    });
+                }
+
+                // Step 5: Test full merging
+                log('🔗 Step 5: Testing full merge process...', 'info');
+                const mergedData = await rssManager.mergeWithDiaryData(mockCSVData);
+                log(`📈 Merge result: ${mergedData.length} total entries (was ${mockCSVData.length})`, 
+                    mergedData.length > mockCSVData.length ? 'success' : 'warning');
+
+                if (mergedData.length > mockCSVData.length) {
+                    const addedEntries = mergedData.length - mockCSVData.length;
+                    log(`✅ Successfully added ${addedEntries} new entries from RSS!`, 'success');
+                    
+                    // Show the first few merged entries
+                    log('Merged data preview (first 5 entries):', 'success');
+                    mergedData.slice(0, 5).forEach((entry, index) => {
+                        const isFromRSS = entry.isLiveData || entry._isFromRSS;
+                        log(`<div class="entry ${isFromRSS ? 'rss-entry' : 'csv-entry'}">
+                            <strong>${index + 1}. ${entry.Name} (${entry.Year})</strong><br>
+                            Watched: ${entry['Watched Date']}<br>
+                            Rating: ${entry.Rating}<br>
+                            Source: ${isFromRSS ? 'RSS Live Data' : 'CSV Export'}
+                        </div>`, 'success');
+                    });
+                } else {
+                    log('❌ No entries were added during merge', 'error');
+                }
+
+                log('🎉 Merge debugging complete!', 'success');
+
+            } catch (error) {
+                log(`💥 Debug failed: ${error.message}`, 'error');
+                log(`Stack: ${error.stack}`, 'error');
+            }
+        }
+
+        // Auto-run when page loads
+        window.addEventListener('load', () => {
+            log('🚀 RSS Merge Debug loaded. Click "Debug Merging Process" to start.', 'info');
+        });
+    </script>
+</body>
+</html>

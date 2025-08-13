@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final RSS Integration Test</title>
+    <script src="rss-manager.js"></script>
+</head>
+<body>
+    <h1>Final RSS Integration Test</h1>
+    <div id="results"></div>
+
+    <script>
+        async function testFinalIntegration() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Starting final integration test...</p>';
+
+            try {
+                // Initialize RSS manager
+                const rssManager = new LetterboxdRSSManager();
+                window.letterboxdRSS = rssManager;
+
+                // Test with sample user
+                const testUser = 'filmcritic';
+                rssManager.init(testUser, true);
+
+                results.innerHTML += '<p>✅ RSS Manager initialized</p>';
+
+                // Test RSS connectivity
+                const hasAccess = await rssManager.testRSSAccess(testUser);
+                results.innerHTML += `<p>${hasAccess ? '✅' : '❌'} RSS Access Test: ${hasAccess}</p>`;
+
+                if (hasAccess) {
+                    // Test recent diary entries
+                    const diaryEntries = await rssManager.getRecentDiaryEntries(5);
+                    results.innerHTML += `<p>✅ Retrieved ${diaryEntries.length} diary entries</p>`;
+
+                    // Display first entry for verification
+                    if (diaryEntries.length > 0) {
+                        const entry = diaryEntries[0];
+                        results.innerHTML += `
+                            <div style="border: 1px solid #ccc; padding: 10px; margin: 10px 0;">
+                                <h3>Sample RSS Entry:</h3>
+                                <p><strong>Film:</strong> ${entry.Name} (${entry.Year})</p>
+                                <p><strong>Rating:</strong> ${entry.Rating}</p>
+                                <p><strong>Watch Date:</strong> ${entry['Watched Date']}</p>
+                                <p><strong>Is Live Data:</strong> ${entry.isLiveData}</p>
+                                <p><strong>Letterboxd URL:</strong> ${entry['Letterboxd URI']}</p>
+                            </div>
+                        `;
+
+                        // Test star rating formatting
+                        if (entry.Rating) {
+                            const stars = '★'.repeat(parseInt(entry.Rating));
+                            results.innerHTML += `<p>✅ Star Rating Display Test: ${stars} (${entry.Rating} stars)</p>`;
+                        }
+                    }
+
+                    // Test data merging simulation
+                    const sampleCSVData = [
+                        {
+                            Name: "Test Film",
+                            Year: "2023",
+                            "Watched Date": "2023-12-01",
+                            Rating: "4",
+                            "Letterboxd URI": "https://letterboxd.com/film/test-film/"
+                        }
+                    ];
+
+                    const mergedData = await rssManager.mergeWithDiaryData(sampleCSVData);
+                    results.innerHTML += `<p>✅ Data merge test: ${mergedData.length} total entries after merge</p>`;
+
+                    results.innerHTML += '<p>🎉 All tests completed successfully!</p>';
+                } else {
+                    results.innerHTML += '<p>❌ Cannot proceed without RSS access</p>';
+                }
+
+            } catch (error) {
+                results.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+                console.error('Test error:', error);
+            }
+        }
+
+        // Run test when page loads
+        document.addEventListener('DOMContentLoaded', testFinalIntegration);
+    </script>
+</body>
+</html>

@@ -516,9 +516,84 @@ class LetterboxdViewer {
             
             // Set initial state
             liveDataSwitch.checked = false; // Default to off
+            
+            // Add event listener for toggle
+            liveDataSwitch.addEventListener('change', () => {
+                this.toggleLiveData(liveDataSwitch.checked);
+            });
         } else {
             // Hide the toggle
             liveDataToggle.classList.add('d-none');
+        }
+    }
+
+    async toggleLiveData(enabled) {
+        if (enabled) {
+            console.log('Live data enabled - fetching RSS data...');
+            
+            // Show toast notification
+            this.showToast('Enabling live data...', 'info');
+            
+            try {
+                // Test RSS access first
+                const hasAccess = await window.letterboxdRSS.testRSSAccess(this.currentUser.letterboxdUsername);
+                if (!hasAccess) {
+                    throw new Error('RSS feed not accessible');
+                }
+                
+                // Merge RSS data with existing data
+                await this.mergeRSSData();
+                
+                this.showToast('Live data enabled! 📡', 'success');
+            } catch (error) {
+                console.error('Failed to enable live data:', error);
+                this.showToast('Failed to enable live data: ' + error.message, 'error');
+                
+                // Reset toggle on error
+                document.getElementById('liveDataSwitch').checked = false;
+            }
+        } else {
+            console.log('Live data disabled - reverting to CSV data');
+            this.showToast('Live data disabled', 'info');
+        }
+        
+        // Refresh current view
+        if (this.currentSection === 'dashboard') {
+            this.showDashboard();
+        } else if (this.currentSection === 'diary') {
+            this.renderDiary();
+        } else if (this.currentSection === 'allFilms') {
+            this.renderAllFilms();
+        }
+    }
+
+    async mergeRSSData() {
+        if (!window.letterboxdRSS || !window.letterboxdRSS.isLiveDataAvailable()) {
+            return;
+        }
+
+        try {
+            // Merge diary data with smart date filtering
+            const originalDiaryLength = this.data.diary.length;
+            this.data.diary = await window.letterboxdRSS.mergeWithDiaryData(this.data.diary);
+            const newDiaryEntries = this.data.diary.length - originalDiaryLength;
+            
+            // Merge watched data to add new films
+            const originalWatchedLength = this.data.watched.length;
+            this.data.watched = await window.letterboxdRSS.mergeWithWatchedData(this.data.watched);
+            const newWatchedEntries = this.data.watched.length - originalWatchedLength;
+            
+            console.log(`RSS merge complete: +${newDiaryEntries} diary entries, +${newWatchedEntries} watched entries`);
+            
+            if (newDiaryEntries > 0 || newWatchedEntries > 0) {
+                this.showToast(`Added ${newDiaryEntries} new diary entries and ${newWatchedEntries} new films`, 'success');
+            } else {
+                this.showToast('No new entries found in RSS feed', 'info');
+            }
+            
+        } catch (error) {
+            console.error('Failed to merge RSS data:', error);
+            throw error;
         }
     }
     
@@ -2171,98 +2246,7 @@ function showLists() {
 }
 function showUserSwitcher() { app.showUserSwitcher(); }
 
-// RSS Live Data Toggle Function
-async function toggleLiveData() {
-    const liveDataSwitch = document.getElementById('liveDataSwitch');
-    const isEnabled = liveDataSwitch.checked;
-    
-    if (isEnabled) {
-        console.log('Enabling live data from RSS...');
-        
-        // Test RSS connectivity first
-        const connectivitySuccess = await testRSSConnectivity();
-        
-        if (connectivitySuccess) {
-            // If connectivity test passed, refresh the view to show live data
-            console.log('RSS connectivity confirmed, refreshing view with live data...');
-            refreshCurrentView();
-        } else {
-            // If connectivity failed, disable the toggle
-            console.log('RSS connectivity failed, disabling toggle...');
-            liveDataSwitch.checked = false;
-        }
-    } else {
-        console.log('Disabling live data...');
-        // Clear any cached RSS data
-        if (window.letterboxdRSS) {
-            window.letterboxdRSS.clearCache();
-        }
-        // Refresh current view to show only CSV data
-        refreshCurrentView();
-    }
-}
 
-// Test RSS connectivity and show user feedback
-async function testRSSConnectivity() {
-    const username = window.viewer?.currentUser?.letterboxdUsername || window.viewer?.currentUser?.id;
-    
-    if (!username || !window.letterboxdRSS) {
-        window.viewer?.showToast('Error: RSS manager not available', 'error');
-        document.getElementById('liveDataSwitch').checked = false;
-        return false;
-    }
-    
-    // Show loading state
-    window.viewer?.showToast('Testing RSS connection...', 'info');
-    
-    try {
-        const hasRSSAccess = await window.letterboxdRSS.testRSSAccess(username);
-        
-        if (hasRSSAccess) {
-            window.viewer?.showToast('Live data enabled! RSS feed connected successfully.', 'success');
-            return true;
-        } else {
-            window.viewer?.showToast(`No RSS feed found for user "${username}". Please check the username.`, 'warning');
-            document.getElementById('liveDataSwitch').checked = false;
-            return false;
-        }
-    } catch (error) {
-        console.error('RSS connectivity test failed:', error);
-        window.viewer?.showToast('Failed to connect to RSS feed. Please try again later.', 'error');
-        document.getElementById('liveDataSwitch').checked = false;
-        return false;
-    }
-}
-
-// Refresh the current view (rerun the current section's display function)
-function refreshCurrentView() {
-    if (!window.viewer) return;
-    
-    const currentSection = window.viewer.currentSection;
-    
-    switch (currentSection) {
-        case 'dashboard':
-                       window.viewer.showDashboard();
-            break;
-        case 'diary':
-            window.viewer.showDiary();
-            break;
-        case 'allFilms':
-            window.viewer.showAllFilms();
-            break;
-        case 'watchlist':
-            window.viewer.showWatchlist();
-            break;
-        case 'reviews':
-            window.viewer.showReviews();
-            break;
-        case 'lists':
-            window.viewer.showLists();
-            break;
-        default:
-            console.log('Unknown section:', currentSection);
-    }
-}
 
 // Initialize the application
 const app = new LetterboxdViewer();

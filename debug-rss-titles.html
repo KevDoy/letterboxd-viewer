@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug RSS Titles</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .item { border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
+        .title { font-weight: bold; color: #007bff; }
+        .link { color: #28a745; font-size: 0.9em; }
+        .description { color: #666; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Debug RSS Titles and Film Extraction</h1>
+    
+    <button onclick="testRSSParsing()">Test RSS Parsing</button>
+    <div id="results"></div>
+
+    <script src="rss-manager.js"></script>
+    <script>
+        async function testRSSParsing() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Loading RSS data...</p>';
+            
+            try {
+                const rssManager = window.letterboxdRSS;
+                rssManager.init('ghosteffect', true);
+                rssManager.clearCache();
+                
+                // Get raw RSS items
+                const rawItems = await rssManager.fetchRSSFeed();
+                console.log('Raw RSS items:', rawItems);
+                
+                resultsDiv.innerHTML = '';
+                
+                rawItems.slice(0, 10).forEach((item, index) => {
+                    const filmInfo = rssManager.extractFilmInfo(item.title, item.link, item.description);
+                    
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'item';
+                    itemDiv.innerHTML = `
+                        <div class="title">Item ${index + 1}: ${item.title}</div>
+                        <div class="link">Link: ${item.link}</div>
+                        <div class="description">Description: ${item.description}</div>
+                        <div style="margin-top: 10px; padding: 10px; background: #f8f9fa;">
+                            <strong>Extracted Film Info:</strong><br>
+                            Title: ${filmInfo.title || 'NOT EXTRACTED'}<br>
+                            Year: ${filmInfo.year || 'NOT EXTRACTED'}<br>
+                            Activity Type: ${item.activityType}
+                        </div>
+                    `;
+                    
+                    resultsDiv.appendChild(itemDiv);
+                });
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

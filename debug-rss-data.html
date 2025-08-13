@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSS Data Debug</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+        .warning { background: #fff3cd; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; font-size: 12px; max-height: 400px; overflow-y: auto; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RSS Data Debug for ghosteffect</h1>
+        <button onclick="debugRSSData()">Debug RSS Data</button>
+        <button onclick="clearResults()">Clear</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script src="rss-manager.js"></script>
+    <script>
+        function addResult(title, content, className = '') {
+            const div = document.createElement('div');
+            div.className = `debug-section ${className}`;
+            div.innerHTML = `<h3>${title}</h3>${content}`;
+            document.getElementById('results').appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function debugRSSData() {
+            clearResults();
+            addResult('Starting RSS Debug', 'Fetching and analyzing RSS data for ghosteffect...');
+
+            try {
+                // Initialize RSS manager
+                const rssManager = window.letterboxdRSS;
+                rssManager.init('ghosteffect', true);
+                rssManager.clearCache(); // Force fresh fetch
+
+                addResult('Step 1: Raw RSS Fetch', 'Fetching raw RSS items...');
+                
+                // Get raw RSS items (before diary filtering)
+                const rawRSSItems = await rssManager.fetchRSSFeed();
+                
+                addResult('Raw RSS Items Found', `
+                    <p><strong>Total items:</strong> ${rawRSSItems.length}</p>
+                    <p><strong>Sample items:</strong></p>
+                    <pre>${JSON.stringify(rawRSSItems.slice(0, 3), null, 2)}</pre>
+                `, rawRSSItems.length > 0 ? 'success' : 'warning');
+
+                // Analyze activity types
+                if (rawRSSItems.length > 0) {
+                    const activityTypes = {};
+                    rawRSSItems.forEach(item => {
+                        const type = item.activityType || 'unknown';
+                        activityTypes[type] = (activityTypes[type] || 0) + 1;
+                    });
+
+                    addResult('Activity Type Analysis', `
+                        <p><strong>Activity types found:</strong></p>
+                        <pre>${JSON.stringify(activityTypes, null, 2)}</pre>
+                        <p><strong>Looking for 'diary' entries...</strong></p>
+                    `, 'success');
+
+                    // Show sample titles to see what we're working with
+                    const sampleTitles = rawRSSItems.slice(0, 5).map(item => item.title);
+                    addResult('Sample RSS Titles', `
+                        <p>These are the actual titles from the RSS feed:</p>
+                        <pre>${JSON.stringify(sampleTitles, null, 2)}</pre>
+                    `, 'success');
+                }
+
+                addResult('Step 2: Diary Entry Filtering', 'Trying to get diary entries...');
+                
+                // Get diary entries (this is what the app calls)
+                const diaryEntries = await rssManager.getRecentDiaryEntries(20);
+                
+                addResult('Diary Entries Result', `
+                    <p><strong>Diary entries found:</strong> ${diaryEntries.length}</p>
+                    ${diaryEntries.length > 0 ? `
+                        <p><strong>Sample diary entries:</strong></p>
+                        <pre>${JSON.stringify(diaryEntries.slice(0, 3), null, 2)}</pre>
+                    ` : `
+                        <p><strong>No diary entries found!</strong></p>
+                        <p>This explains why the UI shows no data.</p>
+                        <p>The issue is likely in the activity type detection.</p>
+                    `}
+                `, diaryEntries.length > 0 ? 'success' : 'error');
+
+                // Test activity type detection on sample data
+                if (rawRSSItems.length > 0) {
+                    addResult('Step 3: Activity Type Detection Test', 'Testing activity type detection...');
+                    
+                    const testResults = rawRSSItems.slice(0, 5).map(item => {
+                        const detectedType = rssManager.determineActivityType(item.title, item.description);
+                        return {
+                            title: item.title,
+                            detectedType: detectedType,
+                            shouldBeDiary: item.title.toLowerCase().includes('watched') || 
+                                         item.title.toLowerCase().includes('diary') ||
+                                         item.title.toLowerCase().includes('logged')
+                        };
+                    });
+
+                    addResult('Activity Type Detection Results', `
+                        <pre>${JSON.stringify(testResults, null, 2)}</pre>
+                    `, 'success');
+                }
+
+            } catch (error) {
+                addResult('Debug Failed', `
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p><strong>Stack:</strong></p>
+                    <pre>${error.stack}</pre>
+                `, 'error');
+            }
+        }
+
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            addResult('Debug Page Ready', 'Click "Debug RSS Data" to analyze the RSS feed for ghosteffect', 'success');
+        });
+    </script>
+</body>
+</html>
