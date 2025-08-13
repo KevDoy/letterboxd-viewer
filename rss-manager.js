@@ -541,39 +541,32 @@ class LetterboxdRSSManager {
         }
 
         try {
-            // Use diary data to find the latest date, not watched data
-            // This ensures we only get RSS entries newer than the latest diary export
-            const latestEntry = existingDiaryData && existingDiaryData.length > 0 
-                ? existingDiaryData.reduce((latest, entry) => {
-                    const entryDate = new Date(entry['Date'] || entry['Watched Date']);
-                    const latestDate = new Date(latest['Date'] || latest['Watched Date']);
-                    return entryDate > latestDate ? entry : latest;
-                }, existingDiaryData[0])
-                : null;
-
-            const latestDate = latestEntry ? new Date(latestEntry['Date'] || latestEntry['Watched Date']) : new Date('1900-01-01');
-            
-            console.log('Latest diary entry date for watched merging:', this.formatDateForCSV(latestDate));
-
-            // Get only NEW RSS entries (same as diary filtering)
+            // Get all RSS entries and check which ones are missing from watched list
             const rssItems = await this.fetchRSSFeed();
+            console.log(`Total RSS items for watched merge: ${rssItems.length}`);
+            
+            // Create a set of existing watched films for fast lookup (normalize titles)
+            const existingWatchedSet = new Set();
+            if (existingWatchedData && existingWatchedData.length > 0) {
+                existingWatchedData.forEach(entry => {
+                    const name = entry['Name'] || entry['Film'];
+                    const year = entry['Year'] || '';
+                    if (name) {
+                        const normalizedKey = `${name.toLowerCase().trim()}_${year}`;
+                        existingWatchedSet.add(normalizedKey);
+                    }
+                });
+            }
+            
+            console.log(`Existing watched films: ${existingWatchedSet.size}`);
+            
+            // Find RSS entries that aren't in the watched list yet
             const newRSSEntries = rssItems
-                .filter(item => {
-                    const itemDate = new Date(item.pubDate);
-                    
-                    // Compare only date parts to avoid timezone issues
-                    const itemDateStr = this.formatDateForCSV(itemDate);
-                    const latestDateStr = this.formatDateForCSV(latestDate);
-                    
-                    const isNewer = itemDateStr > latestDateStr;
-                    console.log(`RSS item date: ${itemDateStr}, is newer than ${latestDateStr}: ${isNewer}`);
-                    return isNewer;
-                })
                 .map(item => {
                     const filmInfo = item.filmInfo || {};
                     const watchedDate = new Date(item.pubDate);
                     
-                    // Skip entries without valid film titles (same validation as diary)
+                    // Skip entries without valid film titles
                     if (!filmInfo.title || 
                         filmInfo.title.trim().length === 0 || 
                         filmInfo.title.match(/^\d+$/) || 
@@ -584,6 +577,15 @@ class LetterboxdRSSManager {
                         console.log('Skipping invalid RSS entry for watched:', item.title, 'extracted:', filmInfo.title);
                         return null;
                     }
+                    
+                    // Check if this film is already in the watched list
+                    const normalizedKey = `${filmInfo.title.toLowerCase().trim()}_${filmInfo.year || ''}`;
+                    if (existingWatchedSet.has(normalizedKey)) {
+                        console.log('Film already in watched list, skipping:', filmInfo.title, filmInfo.year);
+                        return null;
+                    }
+                    
+                    console.log('Adding new RSS entry to watched:', filmInfo.title, filmInfo.year);
                     
                     return {
                         'Date': this.formatDateForCSV(watchedDate),
