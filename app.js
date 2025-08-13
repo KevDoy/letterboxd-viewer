@@ -578,9 +578,9 @@ class LetterboxdViewer {
             this.data.diary = await window.letterboxdRSS.mergeWithDiaryData(this.data.diary);
             const newDiaryEntries = this.data.diary.length - originalDiaryLength;
             
-            // Merge watched data to add new films
+            // Merge watched data to add new films (pass diary data for date reference)
             const originalWatchedLength = this.data.watched.length;
-            this.data.watched = await window.letterboxdRSS.mergeWithWatchedData(this.data.watched);
+            this.data.watched = await window.letterboxdRSS.mergeWithWatchedData(this.data.watched, this.data.diary);
             const newWatchedEntries = this.data.watched.length - originalWatchedLength;
             
             console.log(`RSS merge complete: +${newDiaryEntries} diary entries, +${newWatchedEntries} watched entries`);

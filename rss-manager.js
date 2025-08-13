@@ -296,7 +296,12 @@ class LetterboxdRSSManager {
         }
 
         // Final validation - don't return entries with just numbers or invalid titles
-        if (!filmTitle || filmTitle.match(/^\d+$/) || filmTitle.length < 2) {
+        if (!filmTitle || 
+            filmTitle.match(/^\d+$/) || 
+            filmTitle.length < 2 ||
+            filmTitle.match(/^[\s\-\,\★]+$/) || // Skip entries with just punctuation/stars
+            filmTitle.toLowerCase() === 'unknown' ||
+            filmTitle.toLowerCase() === 'unknown film') {
             console.log('Invalid title detected, skipping:', filmTitle);
             return {
                 title: null,
@@ -376,9 +381,15 @@ class LetterboxdRSSManager {
                     // Accept all RSS activity as potential diary entries
                     // Filter by date only - must be AFTER the latest CSV date
                     const itemDate = new Date(item.pubDate);
-                    const isNewer = itemDate > sinceDateObj;
+                    const sinceDateObj = new Date(sinceDate);
                     
-                    console.log(`Date comparison: ${item.pubDate.toISOString()} > ${sinceDateObj.toISOString()} = ${isNewer}`);
+                    // Compare only the date parts (YYYY-MM-DD) to avoid timezone issues
+                    const itemDateStr = this.formatDateForCSV(itemDate);
+                    const sinceDateStr = this.formatDateForCSV(sinceDateObj);
+                    
+                    const isNewer = itemDateStr > sinceDateStr;
+                    
+                    console.log(`Date comparison: ${itemDateStr} > ${sinceDateStr} = ${isNewer}`);
                     
                     return isNewer;
                 })
@@ -400,11 +411,14 @@ class LetterboxdRSSManager {
         const filmInfo = rssItem.filmInfo || {};
         const watchedDate = new Date(rssItem.pubDate);
         
-        // Skip entries without valid film titles
+        // Skip entries without valid film titles (comprehensive validation)
         if (!filmInfo.title || 
             filmInfo.title.trim().length === 0 || 
             filmInfo.title.match(/^\d+$/) || // Skip entries that are just numbers
-            filmInfo.title.length < 2) { // Skip very short titles
+            filmInfo.title.length < 2 || // Skip very short titles
+            filmInfo.title.match(/^[\s\-\,\★]+$/) || // Skip entries with just punctuation/stars
+            filmInfo.title.toLowerCase() === 'unknown' ||
+            filmInfo.title.toLowerCase() === 'unknown film') {
             console.log('Skipping RSS item without valid title:', rssItem.title, 'extracted:', filmInfo.title);
             return null;
         }
@@ -441,9 +455,13 @@ class LetterboxdRSSManager {
 
     /**
      * Format date for CSV compatibility (YYYY-MM-DD)
+     * Use local timezone to avoid date shifting issues
      */
     formatDateForCSV(date) {
-        return date.toISOString().split('T')[0];
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     }
 
     /**
@@ -492,38 +510,75 @@ class LetterboxdRSSManager {
     /**
      * Merge RSS entries with watched data to add new films
      */
-    async mergeWithWatchedData(existingWatchedData) {
+    async mergeWithWatchedData(existingWatchedData, existingDiaryData) {
         if (!this.isLiveDataAvailable()) {
             return existingWatchedData || [];
         }
 
         try {
-            // Get all diary entries from RSS (treat all RSS activity as diary entries)
+            // Use diary data to find the latest date, not watched data
+            // This ensures we only get RSS entries newer than the latest diary export
+            const latestEntry = existingDiaryData && existingDiaryData.length > 0 
+                ? existingDiaryData.reduce((latest, entry) => {
+                    const entryDate = new Date(entry['Date'] || entry['Watched Date']);
+                    const latestDate = new Date(latest['Date'] || latest['Watched Date']);
+                    return entryDate > latestDate ? entry : latest;
+                }, existingDiaryData[0])
+                : null;
+
+            const latestDate = latestEntry ? new Date(latestEntry['Date'] || latestEntry['Watched Date']) : new Date('1900-01-01');
+            
+            console.log('Latest diary entry date for watched merging:', this.formatDateForCSV(latestDate));
+
+            // Get only NEW RSS entries (same as diary filtering)
             const rssItems = await this.fetchRSSFeed();
-            const rssDiaryEntries = rssItems
-                .map(item => this.convertRSSItemToWatchedFormat(item));
+            const newRSSEntries = rssItems
+                .filter(item => {
+                    const itemDate = new Date(item.pubDate);
+                    
+                    // Compare only date parts to avoid timezone issues
+                    const itemDateStr = this.formatDateForCSV(itemDate);
+                    const latestDateStr = this.formatDateForCSV(latestDate);
+                    
+                    const isNewer = itemDateStr > latestDateStr;
+                    console.log(`RSS item date: ${itemDateStr}, is newer than ${latestDateStr}: ${isNewer}`);
+                    return isNewer;
+                })
+                .map(item => {
+                    const filmInfo = item.filmInfo || {};
+                    const watchedDate = new Date(item.pubDate);
+                    
+                    // Skip entries without valid film titles (same validation as diary)
+                    if (!filmInfo.title || 
+                        filmInfo.title.trim().length === 0 || 
+                        filmInfo.title.match(/^\d+$/) || 
+                        filmInfo.title.length < 2 ||
+                        filmInfo.title.match(/^[\s\-\,\★]+$/) ||
+                        filmInfo.title.toLowerCase() === 'unknown' ||
+                        filmInfo.title.toLowerCase() === 'unknown film') {
+                        console.log('Skipping invalid RSS entry for watched:', item.title, 'extracted:', filmInfo.title);
+                        return null;
+                    }
+                    
+                    return {
+                        'Date': this.formatDateForCSV(watchedDate),
+                        'Name': filmInfo.title,
+                        'Year': filmInfo.year || '',
+                        'Letterboxd URI': filmInfo.letterboxdUrl || '',
+                        '_isFromRSS': true
+                    };
+                })
+                .filter(entry => entry !== null);
 
-            // Find films that don't exist in watched data
-            const existingFilms = new Set(
-                (existingWatchedData || []).map(film => 
-                    `${film.Name}_${film.Year}`.toLowerCase()
-                )
-            );
-
-            const newFilms = rssDiaryEntries.filter(film => {
-                const filmKey = `${film.Name}_${film.Year}`.toLowerCase();
-                return !existingFilms.has(filmKey);
-            });
-
-            console.log(`Found ${newFilms.length} new films to add to watched list`);
+            console.log(`Found ${newRSSEntries.length} new films to add to watched list`);
 
             // Merge new films with existing data
-            const mergedData = [...(existingWatchedData || []), ...newFilms];
+            const mergedData = [...(existingWatchedData || []), ...newRSSEntries];
             
             // Sort by date descending
             mergedData.sort((a, b) => {
-                const dateA = new Date(a['Date']);
-                const dateB = new Date(b['Date']);
+                const dateA = new Date(a['Date'] || a['Watched Date']);
+                const dateB = new Date(b['Date'] || b['Watched Date']);
                 return dateB - dateA;
             });
 

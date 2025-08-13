@@ -186,7 +186,7 @@
                         return entry;
                     });
 
-                    const mergedWatched = await window.letterboxdRSS.mergeWithWatchedData(watchedData);
+                    const mergedWatched = await window.letterboxdRSS.mergeWithWatchedData(watchedData, diaryData);
                     const newWatchedEntries = mergedWatched.length - watchedData.length;
 
                     addResult('merge-results', 'Watched Merge Result', `

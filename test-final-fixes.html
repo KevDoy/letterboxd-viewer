@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Final RSS Fixes</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; border: 1px solid #bee5eb; }
+        .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Test Final RSS Fixes</h1>
+    <p>Testing the fixes for phantom diary entries and invalid watched entries.</p>
+    
+    <div id="results"></div>
+    
+    <script src="rss-manager.js"></script>
+    <script>
+        function addResult(title, content, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            resultDiv.innerHTML = `<strong>${title}:</strong><br>${content}`;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        async function testFixes() {
+            try {
+                // Initialize RSS manager
+                window.letterboxdRSS = new RSSManager();
+                
+                // Load user settings
+                const response = await fetch('letterboxd-export/users.json');
+                const users = await response.json();
+                const currentUser = users.find(u => u.username === 'ghosteffect');
+                
+                if (!currentUser || !currentUser.rssUrl) {
+                    addResult('Setup Error', 'No RSS URL found for ghosteffect user', 'error');
+                    return;
+                }
+                
+                window.letterboxdRSS.setUserSettings(currentUser);
+                addResult('Setup', 'RSS Manager initialized with ghosteffect settings', 'success');
+                
+                // Test RSS feed fetching and parsing
+                addResult('Testing', 'Fetching RSS feed...', 'info');
+                const rssItems = await window.letterboxdRSS.fetchRSSFeed();
+                addResult('RSS Fetch', `Found ${rssItems.length} RSS items`, 'info');
+                
+                // Show first few items for debugging
+                const sampleItems = rssItems.slice(0, 3).map(item => ({
+                    title: item.title,
+                    filmInfo: item.filmInfo,
+                    pubDate: item.pubDate
+                }));
+                addResult('Sample RSS Items', `<pre>${JSON.stringify(sampleItems, null, 2)}</pre>`, 'info');
+                
+                // Load existing diary data
+                const diaryResponse = await fetch('letterboxd-export/Kev/diary.csv');
+                const diaryText = await diaryResponse.text();
+                const diaryData = window.letterboxdRSS.parseCSV(diaryText);
+                addResult('Diary Data', `Loaded ${diaryData.length} existing diary entries`, 'info');
+                
+                // Find latest diary date
+                const latestDiaryEntry = diaryData.reduce((latest, entry) => {
+                    const entryDate = new Date(entry['Watched Date'] || entry['Date']);
+                    const latestDate = new Date(latest['Watched Date'] || latest['Date']);
+                    return entryDate > latestDate ? entry : latest;
+                }, diaryData[0]);
+                
+                const latestDate = new Date(latestDiaryEntry['Watched Date'] || latestDiaryEntry['Date']);
+                addResult('Latest Diary Date', `Latest entry: ${latestDate.toISOString().split('T')[0]}`, 'info');
+                
+                // Test diary merging
+                const originalDiaryLength = diaryData.length;
+                const mergedDiary = await window.letterboxdRSS.mergeWithDiaryData(diaryData);
+                const newDiaryEntries = mergedDiary.length - originalDiaryLength;
+                
+                addResult('Diary Merge Test', 
+                    `Original: ${originalDiaryLength} entries<br>` +
+                    `Merged: ${mergedDiary.length} entries<br>` +
+                    `New entries: ${newDiaryEntries}`, 
+                    newDiaryEntries >= 0 ? 'success' : 'error');
+                
+                // Show the new diary entries
+                if (newDiaryEntries > 0) {
+                    const newEntries = mergedDiary.slice(0, newDiaryEntries);
+                    addResult('New Diary Entries', 
+                        newEntries.map(entry => 
+                            `${entry.Name} (${entry.Year}) - ${entry['Watched Date']} - Rating: ${entry.Rating || 'None'}`
+                        ).join('<br>'), 
+                        'info');
+                }
+                
+                // Load existing watched data
+                const watchedResponse = await fetch('letterboxd-export/Kev/watched.csv');
+                const watchedText = await watchedResponse.text();
+                const watchedData = window.letterboxdRSS.parseCSV(watchedText);
+                addResult('Watched Data', `Loaded ${watchedData.length} existing watched entries`, 'info');
+                
+                // Test watched merging with diary data for date reference
+                const originalWatchedLength = watchedData.length;
+                const mergedWatched = await window.letterboxdRSS.mergeWithWatchedData(watchedData, diaryData);
+                const newWatchedEntries = mergedWatched.length - originalWatchedLength;
+                
+                addResult('Watched Merge Test', 
+                    `Original: ${originalWatchedLength} entries<br>` +
+                    `Merged: ${mergedWatched.length} entries<br>` +
+                    `New entries: ${newWatchedEntries}`, 
+                    newWatchedEntries >= 0 ? 'success' : 'error');
+                
+                // Show the new watched entries
+                if (newWatchedEntries > 0) {
+                    const newEntries = mergedWatched.slice(0, newWatchedEntries);
+                    addResult('New Watched Entries', 
+                        newEntries.map(entry => 
+                            `${entry.Name} (${entry.Year}) - ${entry.Date}`
+                        ).join('<br>'), 
+                        'info');
+                }
+                
+                // Test validation - check for invalid entries
+                const invalidDiaryEntries = mergedDiary.filter(entry => 
+                    !entry.Name || 
+                    entry.Name.match(/^\d+$/) || 
+                    entry.Name.length < 2 ||
+                    entry.Name.match(/^[\s\-\,\★]+$/) ||
+                    entry.Name.toLowerCase() === 'unknown' ||
+                    entry.Name.toLowerCase() === 'unknown film'
+                );
+                
+                const invalidWatchedEntries = mergedWatched.filter(entry => 
+                    !entry.Name || 
+                    entry.Name.match(/^\d+$/) || 
+                    entry.Name.length < 2 ||
+                    entry.Name.match(/^[\s\-\,\★]+$/) ||
+                    entry.Name.toLowerCase() === 'unknown' ||
+                    entry.Name.toLowerCase() === 'unknown film'
+                );
+                
+                addResult('Validation Check', 
+                    `Invalid diary entries: ${invalidDiaryEntries.length}<br>` +
+                    `Invalid watched entries: ${invalidWatchedEntries.length}`, 
+                    (invalidDiaryEntries.length === 0 && invalidWatchedEntries.length === 0) ? 'success' : 'warning');
+                
+                if (invalidDiaryEntries.length > 0) {
+                    addResult('Invalid Diary Entries', 
+                        invalidDiaryEntries.map(entry => entry.Name).join(', '), 
+                        'warning');
+                }
+                
+                if (invalidWatchedEntries.length > 0) {
+                    addResult('Invalid Watched Entries', 
+                        invalidWatchedEntries.map(entry => entry.Name).join(', '), 
+                        'warning');
+                }
+                
+            } catch (error) {
+                addResult('Error', `Test failed: ${error.message}`, 'error');
+                console.error('Test error:', error);
+            }
+        }
+
+        // Run tests when page loads
+        window.addEventListener('load', testFixes);
+    </script>
+</body>
+</html>
