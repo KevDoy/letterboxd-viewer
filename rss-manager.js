@@ -217,13 +217,23 @@ class LetterboxdRSSManager {
             .replace(/â€™/g, "'") // Fix encoded apostrophes
             .replace(/â€œ/g, '"') // Fix encoded quotes
             .replace(/â€/g, '"')
-            .replace(/ââÂ½/g, '½') // Fix encoded half star
+            // Fix specific patterns from your RSS feed
+            .replace(/ââââ/g, '★★★★') // Fix 4 stars
+            .replace(/âââ/g, '★★★') // Fix 3 stars
+            .replace(/ââ/g, '★★') // Fix 2 stars
+            .replace(/ââÂ½/g, '★★½') // Fix 2.5 stars
+            .replace(/âÂ½/g, '★½') // Fix 1.5 stars
             .replace(/â½/g, '½') // Fix other half star encoding
-            .replace(/â/g, '') // Remove remaining broken encoding artifacts
+            .replace(/Â½/g, '½') // Fix remaining half star encoding
+            .replace(/â/g, '★') // Convert remaining â to stars as fallback
             .trim();
 
         console.log('Original title:', title);
         console.log('Cleaned title:', cleanTitle);
+
+        // Debug: show what star patterns we can find
+        const starPatterns = cleanTitle.match(/[★½]+/g);
+        console.log('Found star patterns:', starPatterns);
 
         // Pattern for your RSS format: "username FilmTitle, Year - ★★½" (including half stars)
         const mainPattern = /^[^\s]+\s+(.+?),\s*(\d{4})\s*-\s*(★*½?)$/;
@@ -250,11 +260,12 @@ class LetterboxdRSSManager {
                 year = parseInt(altMatch[2]);
                 
                 // Extract stars and half stars separately
-                const starMatch = cleanTitle.match(/★+½?/);
-                if (starMatch) {
-                    const ratingStr = starMatch[0];
-                    const fullStars = (ratingStr.match(/★/g) || []).length;
-                    const hasHalfStar = ratingStr.includes('½');
+                const starMatch = cleanTitle.match(/[★½]+/g);
+                if (starMatch && starMatch.length > 0) {
+                    // Join all star patterns and count
+                    const allStars = starMatch.join('');
+                    const fullStars = (allStars.match(/★/g) || []).length;
+                    const hasHalfStar = allStars.includes('½');
                     rating = fullStars + (hasHalfStar ? 0.5 : 0);
                 }
                 
@@ -284,11 +295,12 @@ class LetterboxdRSSManager {
                 }
 
                 // Extract star rating including half stars from anywhere in the title
-                const starMatch = cleanTitle.match(/★+½?/);
-                if (starMatch) {
-                    const ratingStr = starMatch[0];
-                    const fullStars = (ratingStr.match(/★/g) || []).length;
-                    const hasHalfStar = ratingStr.includes('½');
+                const starMatch = cleanTitle.match(/[★½]+/g);
+                if (starMatch && starMatch.length > 0) {
+                    // Join all star patterns and count
+                    const allStars = starMatch.join('');
+                    const fullStars = (allStars.match(/★/g) || []).length;
+                    const hasHalfStar = allStars.includes('½');
                     rating = fullStars + (hasHalfStar ? 0.5 : 0);
                 }
 
