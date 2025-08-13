@@ -5,6 +5,7 @@ class LetterboxdRSSManager {
         this.cacheTimeout = 5 * 60 * 1000; // 5 minutes cache
         this.isEnabled = false;
         this.currentUsername = null;
+        this.lastAddedDiaryEntries = []; // Track newly added diary entries for watched merge
     }
 
     /**
@@ -514,6 +515,14 @@ class LetterboxdRSSManager {
             
             console.log(`Found ${newRSSEntries.length} new RSS diary entries`);
 
+            // Store the new entries for watched merge (clean copies without _isFromRSS flag yet)
+            this.lastAddedDiaryEntries = newRSSEntries.map(entry => ({...entry}));
+
+            // Add RSS flag to diary entries
+            newRSSEntries.forEach(entry => {
+                entry._isFromRSS = true;
+            });
+
             // Merge with existing data (RSS entries first for chronological order)
             const mergedData = [...newRSSEntries, ...existingDiaryData];
             
@@ -541,9 +550,14 @@ class LetterboxdRSSManager {
         }
 
         try {
-            // Get all RSS entries and check which ones are missing from watched list
-            const rssItems = await this.fetchRSSFeed();
-            console.log(`Total RSS items for watched merge: ${rssItems.length}`);
+            // Use the entries that were just added to the diary, not all RSS items
+            const newDiaryEntries = this.lastAddedDiaryEntries || [];
+            console.log(`Using ${newDiaryEntries.length} newly added diary entries for watched merge`);
+            
+            if (newDiaryEntries.length === 0) {
+                console.log('No new diary entries to add to watched list');
+                return existingWatchedData || [];
+            }
             
             // Create a set of existing watched films for fast lookup (normalize titles)
             const existingWatchedSet = new Set();
@@ -560,47 +574,47 @@ class LetterboxdRSSManager {
             
             console.log(`Existing watched films: ${existingWatchedSet.size}`);
             
-            // Find RSS entries that aren't in the watched list yet
-            const newRSSEntries = rssItems
-                .map(item => {
-                    const filmInfo = item.filmInfo || {};
-                    const watchedDate = new Date(item.pubDate);
+            // Convert diary entries to watched format, skipping duplicates
+            const newWatchedEntries = newDiaryEntries
+                .map(diaryEntry => {
+                    const name = diaryEntry['Name'];
+                    const year = diaryEntry['Year'] || '';
                     
                     // Skip entries without valid film titles
-                    if (!filmInfo.title || 
-                        filmInfo.title.trim().length === 0 || 
-                        filmInfo.title.match(/^\d+$/) || 
-                        filmInfo.title.length < 2 ||
-                        filmInfo.title.match(/^[\s\-\,\★]+$/) ||
-                        filmInfo.title.toLowerCase() === 'unknown' ||
-                        filmInfo.title.toLowerCase() === 'unknown film') {
-                        console.log('Skipping invalid RSS entry for watched:', item.title, 'extracted:', filmInfo.title);
+                    if (!name || 
+                        name.trim().length === 0 || 
+                        name.match(/^\d+$/) || 
+                        name.length < 2 ||
+                        name.match(/^[\s\-\,\★]+$/) ||
+                        name.toLowerCase() === 'unknown' ||
+                        name.toLowerCase() === 'unknown film') {
+                        console.log('Skipping invalid diary entry for watched:', name);
                         return null;
                     }
                     
                     // Check if this film is already in the watched list
-                    const normalizedKey = `${filmInfo.title.toLowerCase().trim()}_${filmInfo.year || ''}`;
+                    const normalizedKey = `${name.toLowerCase().trim()}_${year}`;
                     if (existingWatchedSet.has(normalizedKey)) {
-                        console.log('Film already in watched list, skipping:', filmInfo.title, filmInfo.year);
+                        console.log('Film already in watched list, skipping:', name, year);
                         return null;
                     }
                     
-                    console.log('Adding new RSS entry to watched:', filmInfo.title, filmInfo.year);
+                    console.log('Adding diary entry to watched:', name, year);
                     
                     return {
-                        'Date': this.formatDateForCSV(watchedDate),
-                        'Name': filmInfo.title,
-                        'Year': filmInfo.year || '',
-                        'Letterboxd URI': filmInfo.letterboxdUrl || '',
+                        'Date': diaryEntry['Date'] || diaryEntry['Watched Date'],
+                        'Name': name,
+                        'Year': year,
+                        'Letterboxd URI': diaryEntry['Letterboxd URI'] || '',
                         '_isFromRSS': true
                     };
                 })
                 .filter(entry => entry !== null);
 
-            console.log(`Found ${newRSSEntries.length} new films to add to watched list`);
+            console.log(`Found ${newWatchedEntries.length} new films to add to watched list from recently added diary entries`);
 
             // Merge new films with existing data
-            const mergedData = [...(existingWatchedData || []), ...newRSSEntries];
+            const mergedData = [...(existingWatchedData || []), ...newWatchedEntries];
             
             // Sort by date descending
             mergedData.sort((a, b) => {
@@ -608,6 +622,9 @@ class LetterboxdRSSManager {
                 const dateB = new Date(b['Date'] || b['Watched Date']);
                 return dateB - dateA;
             });
+
+            // Clear the stored entries after use
+            this.lastAddedDiaryEntries = [];
 
             return mergedData;
 
