@@ -7,6 +7,30 @@ class LetterboxdRSSManager {
         this.currentUsername = null;
     }
 
+    // Helper: get text content from possible namespaced tags robustly
+    _getTagText(node, selectors) {
+        if (!node) return '';
+        const selList = Array.isArray(selectors) ? selectors : [selectors];
+        for (const sel of selList) {
+            // Try querySelector with escaped colon if present
+            try {
+                const cssSel = sel.includes(':') ? sel.replace(':', '\\:') : sel;
+                const q = node.querySelector(cssSel);
+                if (q && q.textContent) return q.textContent.trim();
+            } catch (_) {
+                // ignore
+            }
+            // Try getElementsByTagName with the raw selector (e.g., 'letterboxd:filmTitle')
+            try {
+                const els = node.getElementsByTagName(sel);
+                if (els && els.length && els[0].textContent) return els[0].textContent.trim();
+            } catch (_) {
+                // ignore
+            }
+        }
+        return '';
+    }
+
     /**
      * Initialize RSS manager with user settings
      */
@@ -138,20 +162,61 @@ class LetterboxdRSSManager {
             const link = item.querySelector('link')?.textContent || '';
             const description = item.querySelector('description')?.textContent || '';
             const pubDate = item.querySelector('pubDate')?.textContent || '';
+            // Namespaced fields (preferred when present) — try multiple strategies
+            const nsWatchedDate = this._getTagText(item, 'letterboxd:watchedDate');
+            const nsFilmTitle = this._getTagText(item, 'letterboxd:filmTitle');
+            const nsFilmYearText = this._getTagText(item, 'letterboxd:filmYear');
+            const nsMemberRatingText = this._getTagText(item, 'letterboxd:memberRating');
+            const nsFilmYear = nsFilmYearText ? parseInt(nsFilmYearText, 10) : null;
+            const nsMemberRating = nsMemberRatingText ? parseFloat(nsMemberRatingText) : null;
             
-            console.log(`Item ${index + 1}:`, { title, link, pubDate });
+            console.log(`Item ${index + 1}:`, { title, link, pubDate, nsWatchedDate, nsFilmTitle, nsFilmYear });
             
             // Parse the activity type from title
-            const activityType = this.determineActivityType(title, description);
+            let activityType = this.determineActivityType(title, description);
             
-            // Extract film information from the link and description
-            const filmInfo = this.extractFilmInfo(title, link, description);
+            // Extract film information from the title/link/description
+            let filmInfo = this.extractFilmInfo(title, link, description);
+
+            // Force canonical title/year/rating from namespaced fields when present
+            if (nsFilmTitle) filmInfo.title = nsFilmTitle.trim();
+            if (nsFilmYear && !Number.isNaN(nsFilmYear)) filmInfo.year = nsFilmYear;
+            if (nsMemberRating != null && !Number.isNaN(nsMemberRating)) filmInfo.rating = nsMemberRating;
+
+            // If the title looks wrong (starts with year, contains stars, or is empty), try to recover from link slug
+            const looksBadTitle = !filmInfo.title ||
+                /^\d{4}\b/.test(filmInfo.title) ||
+                /[★Ââ]/.test(filmInfo.title) ||
+                filmInfo.title.trim().length < 2;
+            if (looksBadTitle) {
+                const slugMatch = link.match(/\/film\/(.*?)\//);
+                if (slugMatch && slugMatch[1]) {
+                    const slug = slugMatch[1];
+                    const titleFromSlug = slug
+                        .replace(/-/g, ' ')
+                        .replace(/\b\w/g, c => c.toUpperCase());
+                    if (titleFromSlug && titleFromSlug.length > 1) {
+                        filmInfo.title = titleFromSlug;
+                    }
+                }
+            }
+
+            // Already applied canonical fields above; no further action needed
             
+            // Prefer watchedDate for pubDate when available so downstream filtering uses watch day
+            const effectiveDate = nsWatchedDate ? new Date(nsWatchedDate) : (pubDate ? new Date(pubDate) : new Date());
+
+            // If a watchedDate exists, this is a diary entry regardless of title wording
+            if (nsWatchedDate) {
+                activityType = 'diary';
+            }
+
             return {
                 title,
                 link,
                 description,
-                pubDate: pubDate ? new Date(pubDate) : new Date(),
+                pubDate: effectiveDate,
+                watchedDate: nsWatchedDate || null,
                 activityType,
                 filmInfo,
                 isLiveData: true // Flag to identify live data
@@ -362,15 +427,17 @@ class LetterboxdRSSManager {
                     if (!filmInfo.title || filmInfo.title.trim().length === 0) {
                         return null; // Skip invalid entries
                     }
+                    // Prefer letterboxd watchedDate string if available
+                    const dateStr = item.watchedDate || this.formatDateForCSV(item.pubDate);
                     
                     return {
                         Name: filmInfo.title,
                         Year: filmInfo.year || '',
                         LetterboxdURI: filmInfo.letterboxdUrl || '',
                         'Letterboxd URI': filmInfo.letterboxdUrl || '',
-                        WatchedDate: item.pubDate.toISOString().split('T')[0], // YYYY-MM-DD format
-                        'Watched Date': item.pubDate.toISOString().split('T')[0],
-                        Date: item.pubDate.toISOString().split('T')[0],
+                        WatchedDate: dateStr,
+                        'Watched Date': dateStr,
+                        Date: dateStr,
                         Rating: filmInfo.rating ? filmInfo.rating.toString() : '', // Convert to string for consistency
                         Rewatch: 'No', // Default assumption
                         Tags: 'live-data', // Tag to identify live data
@@ -400,17 +467,16 @@ class LetterboxdRSSManager {
         try {
             const rssItems = await this.fetchRSSFeed();
             const sinceDateObj = new Date(sinceDate);
+            const sinceDateStr = this.formatDateForCSV(sinceDateObj);
             
             const entries = rssItems
                 .filter(item => {
                     // Accept all RSS activity as potential diary entries
                     // Filter by date only - must be AFTER the latest CSV date
-                    const itemDate = new Date(item.pubDate);
-                    const sinceDateObj = new Date(sinceDate);
-                    
-                    // Compare only the date parts (YYYY-MM-DD) to avoid timezone issues
-                    const itemDateStr = this.formatDateForCSV(itemDate);
-                    const sinceDateStr = this.formatDateForCSV(sinceDateObj);
+                    // Prefer exact watchedDate string when available to avoid timezone issues
+                    const itemDateStr = item.watchedDate || this.formatDateForCSV(
+                        item.pubDate instanceof Date ? item.pubDate : new Date(item.pubDate)
+                    );
                     
                     const isNewer = itemDateStr > sinceDateStr;
                     
@@ -434,7 +500,9 @@ class LetterboxdRSSManager {
      */
     convertRSSItemToDiaryFormat(rssItem) {
         const filmInfo = rssItem.filmInfo || {};
-        const watchedDate = new Date(rssItem.pubDate);
+        const dateStr = rssItem.watchedDate || this.formatDateForCSV(
+            rssItem.pubDate instanceof Date ? rssItem.pubDate : new Date(rssItem.pubDate)
+        );
         
         // Skip entries without valid film titles (comprehensive validation)
         if (!filmInfo.title || 
@@ -449,14 +517,14 @@ class LetterboxdRSSManager {
         }
         
         return {
-            'Date': this.formatDateForCSV(watchedDate),
+            'Date': dateStr,
             'Name': filmInfo.title,
             'Year': filmInfo.year || '',
             'Letterboxd URI': filmInfo.letterboxdUrl || '',
             'Rating': filmInfo.rating ? filmInfo.rating.toString() : '', // Convert to string for consistency
             'Rewatch': '', // Cannot determine from RSS
-            'Tags': '', // Cannot determine from RSS
-            'Watched Date': this.formatDateForCSV(watchedDate),
+            'Tags': 'live-data', // Mark as live data for UI/debugging
+            'Watched Date': dateStr,
             '_isFromRSS': true, // Flag to identify RSS entries
             'isLiveData': true // Additional flag for UI distinction
         };
