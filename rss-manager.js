@@ -419,7 +419,9 @@ class LetterboxdRSSManager {
 
         try {
             const rssItems = await this.fetchRSSFeed();
+            // Only consider items that explicitly have a letterboxd:watchedDate
             const validEntries = rssItems
+                .filter(item => !!item.watchedDate)
                 .slice(0, limit * 2) // Get more items to account for filtering
                 .map(item => {
                     // Convert to diary format and validate
@@ -427,8 +429,8 @@ class LetterboxdRSSManager {
                     if (!filmInfo.title || filmInfo.title.trim().length === 0) {
                         return null; // Skip invalid entries
                     }
-                    // Prefer letterboxd watchedDate string if available
-                    const dateStr = item.watchedDate || this.formatDateForCSV(item.pubDate);
+                    // Use the letterboxd watchedDate string
+                    const dateStr = item.watchedDate;
                     
                     return {
                         Name: filmInfo.title,
@@ -470,18 +472,12 @@ class LetterboxdRSSManager {
             const sinceDateStr = this.formatDateForCSV(sinceDateObj);
             
             const entries = rssItems
+                // Only items with explicit watchedDate are diary-worthy
+                .filter(item => !!item.watchedDate)
                 .filter(item => {
-                    // Accept all RSS activity as potential diary entries
-                    // Filter by date only - must be AFTER the latest CSV date
-                    // Prefer exact watchedDate string when available to avoid timezone issues
-                    const itemDateStr = item.watchedDate || this.formatDateForCSV(
-                        item.pubDate instanceof Date ? item.pubDate : new Date(item.pubDate)
-                    );
-                    
-                    const isNewer = itemDateStr > sinceDateStr;
-                    
-                    console.log(`Date comparison: ${itemDateStr} > ${sinceDateStr} = ${isNewer}`);
-                    
+                    const itemDateStr = item.watchedDate; // Already YYYY-MM-DD
+                    const isNewer = itemDateStr > sinceDateStr; // strict greater-than
+                    console.log(`Date comparison (watchedDate): ${itemDateStr} > ${sinceDateStr} = ${isNewer}`);
                     return isNewer;
                 })
                 .map(item => this.convertRSSItemToDiaryFormat(item))
@@ -500,9 +496,12 @@ class LetterboxdRSSManager {
      */
     convertRSSItemToDiaryFormat(rssItem) {
         const filmInfo = rssItem.filmInfo || {};
-        const dateStr = rssItem.watchedDate || this.formatDateForCSV(
-            rssItem.pubDate instanceof Date ? rssItem.pubDate : new Date(rssItem.pubDate)
-        );
+        // Require letterboxd:watchedDate to qualify as a diary entry
+        if (!rssItem.watchedDate) {
+            console.log('Skipping RSS item without watchedDate:', rssItem.title);
+            return null;
+        }
+        const dateStr = rssItem.watchedDate;
         
         // Skip entries without valid film titles (comprehensive validation)
         if (!filmInfo.title || 
