@@ -501,7 +501,18 @@ class LetterboxdViewer {
             }).filter(Boolean);
         }
         
-        // Initialize RSS live data if enabled
+        // Snapshot original CSV-only data needed for reverting live merges
+        try {
+            this._csvSnapshot = this._csvSnapshot || {};
+            // Deep copy diary only (others remain unchanged by live merges)
+            this._csvSnapshot.diary = JSON.parse(JSON.stringify(this.data.diary || []));
+        } catch (e) {
+            // Fallback shallow copy
+            this._csvSnapshot = this._csvSnapshot || {};
+            this._csvSnapshot.diary = (this.data.diary || []).map(x => ({ ...x }));
+        }
+
+        // Initialize RSS live data
         this.initializeLiveData();
     }
     
@@ -559,6 +570,14 @@ class LetterboxdViewer {
         } else {
             console.log('Live data disabled - reverting to CSV data');
             this.showToast('Live data disabled', 'info');
+            // Restore original CSV-only diary data
+            if (this._csvSnapshot && Array.isArray(this._csvSnapshot.diary)) {
+                try {
+                    this.data.diary = JSON.parse(JSON.stringify(this._csvSnapshot.diary));
+                } catch (_) {
+                    this.data.diary = (this._csvSnapshot.diary || []).map(x => ({ ...x }));
+                }
+            }
         }
         
     // Refresh current view
@@ -1024,8 +1043,8 @@ class LetterboxdViewer {
     async renderRecentActivity() {
         const recentContainer = document.getElementById('recent-activity');
         
-        // Combine CSV diary data with live RSS data if enabled
-        let diaryData = [...this.data.diary];
+    // Combine CSV diary data with live RSS data if enabled
+    let diaryData = [...this.data.diary];
         
         // Check if live data is enabled
     const liveEnabled = this.isLiveEnabledForCurrentUser();
@@ -1155,9 +1174,8 @@ class LetterboxdViewer {
         // Show loading indicator
         this.showSectionLoading('diary');
         
-        // Combine CSV diary data with live RSS data if enabled
-        // Combine CSV diary data with live RSS data if enabled
-        let diaryData = [...this.data.diary];
+    // Combine CSV diary data with live RSS data if enabled
+    let diaryData = [...this.data.diary];
         
         // Check if live data is enabled
     const liveEnabled = this.isLiveEnabledForCurrentUser();
