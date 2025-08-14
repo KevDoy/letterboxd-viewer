@@ -67,6 +67,17 @@ class LetterboxdViewer {
         
         this.init();
     }
+
+    // Internal: check if live is enabled for the current user
+    isLiveEnabledForCurrentUser() {
+        if (!this.currentUser) return false;
+        const key = `live_enabled_${this.currentUser.id}`;
+        const stored = localStorage.getItem(key);
+        if (stored == null && this._liveDataState && this._liveDataState[this.currentUser.id] != null) {
+            return !!this._liveDataState[this.currentUser.id];
+        }
+        return stored === 'true';
+    }
     
     async init() {
         try {
@@ -496,38 +507,30 @@ class LetterboxdViewer {
     
     // RSS Live Data Integration
     initializeLiveData() {
-        const liveDataToggle = document.getElementById('live-data-toggle');
-        const liveDataSwitch = document.getElementById('liveDataSwitch');
-        
-        if (!this.currentUser || !liveDataToggle || !liveDataSwitch) {
-            return;
-        }
-        
-        // Check if live data is enabled for this user
-        const enableLiveData = this.currentUser.enableLiveData === true;
-        const username = this.currentUser.letterboxdUsername || this.currentUser.id;
-        
-        if (enableLiveData && username) {
-            // Show the toggle
-            liveDataToggle.classList.remove('d-none');
-            
-            // Initialize RSS manager
-            window.letterboxdRSS.init(username, enableLiveData);
-            
-            // Set initial state
-            liveDataSwitch.checked = false; // Default to off
-            
-            // Add event listener for toggle
-            liveDataSwitch.addEventListener('change', () => {
-                this.toggleLiveData(liveDataSwitch.checked);
-            });
-        } else {
-            // Hide the toggle
-            liveDataToggle.classList.add('d-none');
-        }
+    // Prepare internal live data state and initialize RSS manager
+    if (!this.currentUser) return;
+
+    // Internal state: persist in-memory and optionally in localStorage per user
+    if (this._liveDataState == null) this._liveDataState = {};
+    const userKey = this.currentUser.id;
+    const username = this.currentUser.letterboxdUsername || this.currentUser.id;
+    const defaultEnabled = this.currentUser.enableLiveData === true;
+    const stored = localStorage.getItem(`live_enabled_${userKey}`);
+    const enabled = stored == null ? false : stored === 'true';
+    this._liveDataState[userKey] = enabled;
+
+    // Initialize RSS manager (enabled flag just gates availability; fetching is on toggle)
+    window.letterboxdRSS.init(username, defaultEnabled);
     }
 
     async toggleLiveData(enabled) {
+        // Persist per-user preference
+        if (this.currentUser) {
+            localStorage.setItem(`live_enabled_${this.currentUser.id}`, enabled ? 'true' : 'false');
+            if (!this._liveDataState) this._liveDataState = {};
+            this._liveDataState[this.currentUser.id] = enabled;
+        }
+
         if (enabled) {
             console.log('Live data enabled - fetching RSS data...');
             
@@ -549,8 +552,9 @@ class LetterboxdViewer {
                 console.error('Failed to enable live data:', error);
                 this.showToast('Failed to enable live data: ' + error.message, 'error');
                 
-                // Reset toggle on error
-                document.getElementById('liveDataSwitch').checked = false;
+                // Reset UI toggles on error (modal toggle if present)
+                const modalSwitch = document.getElementById('selectedUserLiveSwitch');
+                if (modalSwitch) modalSwitch.checked = false;
             }
         } else {
             console.log('Live data disabled - reverting to CSV data');
@@ -1023,8 +1027,8 @@ class LetterboxdViewer {
         let diaryData = [...this.data.diary];
         
         // Check if live data is enabled
-        const liveDataSwitch = document.getElementById('liveDataSwitch');
-        if (liveDataSwitch && liveDataSwitch.checked && window.letterboxdRSS && window.letterboxdRSS.isLiveDataAvailable()) {
+    const liveEnabled = this.isLiveEnabledForCurrentUser();
+    if (liveEnabled && window.letterboxdRSS && window.letterboxdRSS.isLiveDataAvailable()) {
             try {
                 const liveEntries = await window.letterboxdRSS.getRecentDiaryEntries(10);
                 // Use smart merging to avoid duplicates and only show newer entries
@@ -1155,8 +1159,8 @@ class LetterboxdViewer {
         let diaryData = [...this.data.diary];
         
         // Check if live data is enabled
-        const liveDataSwitch = document.getElementById('liveDataSwitch');
-        if (liveDataSwitch && liveDataSwitch.checked && window.letterboxdRSS && window.letterboxdRSS.isLiveDataAvailable()) {
+    const liveEnabled = this.isLiveEnabledForCurrentUser();
+    if (liveEnabled && window.letterboxdRSS && window.letterboxdRSS.isLiveDataAvailable()) {
             try {
                 const liveEntries = await window.letterboxdRSS.getRecentDiaryEntries(50); // More entries for diary view
                 // Use smart merging to avoid duplicates and only show newer entries
@@ -1361,8 +1365,7 @@ class LetterboxdViewer {
         const paginationContainer = document.getElementById('all-films-pagination');
         
         // Add live data banner only when live data is enabled
-        const liveDataSwitch = document.getElementById('liveDataSwitch');
-        const liveEnabled = liveDataSwitch && liveDataSwitch.checked && window.letterboxdRSS && window.letterboxdRSS.isLiveDataAvailable();
+    const liveEnabled = this.isLiveEnabledForCurrentUser() && window.letterboxdRSS && window.letterboxdRSS.isLiveDataAvailable();
         if (liveEnabled) {
             // Watched page does not include live data; show explanatory banner only when live data is ON
             this.showLiveDataBanner('all-films', false);
@@ -2001,22 +2004,44 @@ class LetterboxdViewer {
         for (const user of this.users) {
             const isActive = user.id === this.currentUser.id;
             const lastUpdated = user.lastUpdated ? new Date(user.lastUpdated).toLocaleDateString() : 'Unknown';
-            html += `
-                <button class="btn ${isActive ? 'btn-success' : 'btn-outline-primary'} user-select-btn mb-2 w-100" 
-                        onclick="app.switchToUser('${user.id}')"
-                        ${isActive ? 'disabled' : ''}>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="text-start">
-                            <div>
-                                <i class="bi bi-person"></i> ${user.displayName}
-                                ${isActive ? '<i class="bi bi-check-circle-fill ms-2"></i>' : ''}
+            if (isActive) {
+                // Selected user: show live toggle on the right
+                const enabled = this.isLiveEnabledForCurrentUser();
+                html += `
+                    <div class="btn btn-success user-select-btn mb-2 w-100 disabled" style="cursor: default;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-start">
+                                <div>
+                                    <i class="bi bi-person"></i> ${user.displayName}
+                                    <i class="bi bi-check-circle-fill ms-2"></i>
+                                </div>
+                                <small class="text-muted">Last updated: ${lastUpdated}</small>
                             </div>
-                            <small class="text-muted">Last updated: ${lastUpdated}</small>
+                            <div class="form-check form-switch ms-3" title="Live Data">
+                                <input class="form-check-input" type="checkbox" id="selectedUserLiveSwitch" ${enabled ? 'checked' : ''}>
+                                <label class="form-check-label" for="selectedUserLiveSwitch">
+                                    <i class="bi bi-rss"></i>
+                                </label>
+                            </div>
                         </div>
-                        ${!isActive ? '<i class="bi bi-chevron-right"></i>' : ''}
                     </div>
-                </button>
-            `;
+                `;
+            } else {
+                html += `
+                    <button class="btn btn-outline-primary user-select-btn mb-2 w-100" 
+                            onclick="app.switchToUser('${user.id}')">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-start">
+                                <div>
+                                    <i class="bi bi-person"></i> ${user.displayName}
+                                </div>
+                                <small class="text-muted">Last updated: ${lastUpdated}</small>
+                            </div>
+                            <i class="bi bi-chevron-right"></i>
+                        </div>
+                    </button>
+                `;
+            }
         }
         
         html += `
@@ -2030,11 +2055,20 @@ class LetterboxdViewer {
         document.body.insertAdjacentHTML('beforeend', html);
         
         // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('userSwitcherModal'));
+        const modalEl = document.getElementById('userSwitcherModal');
+        const modal = new bootstrap.Modal(modalEl);
         modal.show();
+
+        // Hook up selected user live toggle
+        const selectedLiveSwitch = document.getElementById('selectedUserLiveSwitch');
+        if (selectedLiveSwitch) {
+            selectedLiveSwitch.addEventListener('change', () => {
+                this.toggleLiveData(selectedLiveSwitch.checked);
+            });
+        }
         
         // Clean up when modal is hidden
-        document.getElementById('userSwitcherModal').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('userSwitcherModal').addEventListener('hidden.bs.modal', function() {
             this.remove();
         });
     }
