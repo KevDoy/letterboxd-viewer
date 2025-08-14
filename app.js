@@ -578,15 +578,10 @@ class LetterboxdViewer {
             this.data.diary = await window.letterboxdRSS.mergeWithDiaryData(this.data.diary);
             const newDiaryEntries = this.data.diary.length - originalDiaryLength;
             
-            // Merge watched data to add new films (pass diary data for date reference)
-            const originalWatchedLength = this.data.watched.length;
-            this.data.watched = await window.letterboxdRSS.mergeWithWatchedData(this.data.watched, this.data.diary);
-            const newWatchedEntries = this.data.watched.length - originalWatchedLength;
+            console.log(`RSS merge complete: +${newDiaryEntries} diary entries`);
             
-            console.log(`RSS merge complete: +${newDiaryEntries} diary entries, +${newWatchedEntries} watched entries`);
-            
-            if (newDiaryEntries > 0 || newWatchedEntries > 0) {
-                this.showToast(`Added ${newDiaryEntries} new diary entries and ${newWatchedEntries} new films`, 'success');
+            if (newDiaryEntries > 0) {
+                this.showToast(`Added ${newDiaryEntries} new diary entries`, 'success');
             } else {
                 this.showToast('No new entries found in RSS feed', 'info');
             }
@@ -1364,6 +1359,9 @@ class LetterboxdViewer {
     async renderAllFilms() {
         const container = document.getElementById('all-films-content');
         const paginationContainer = document.getElementById('all-films-pagination');
+        
+        // Add live data banner
+        this.showLiveDataBanner('all-films', false); // false = does not have live data
         
         // Use watched data as the primary source for "All Films" - this contains all films marked as watched
         if (this.data.watched.length === 0) {
@@ -2200,6 +2198,42 @@ class LetterboxdViewer {
         }
         
         return keys;
+    }
+
+    // Live data banner system
+    showLiveDataBanner(sectionId, hasLiveData) {
+        // Remove existing banner if it exists
+        const existingBanner = document.querySelector(`#${sectionId} .live-data-banner`);
+        if (existingBanner) {
+            existingBanner.remove();
+        }
+        
+        // Find the section content container
+        const sectionElement = document.getElementById(sectionId);
+        if (!sectionElement) return;
+        
+        // Find the first content container within the section
+        const contentContainer = sectionElement.querySelector('.container-fluid, .container, .row') || sectionElement;
+        
+        // Create banner
+        const banner = document.createElement('div');
+        banner.className = 'live-data-banner alert alert-' + (hasLiveData ? 'success' : 'warning') + ' mb-3';
+        banner.style.marginTop = '10px';
+        
+        const icon = hasLiveData ? '📡' : '⚠️';
+        const message = hasLiveData 
+            ? 'This section includes live data from your Letterboxd RSS feed'
+            : 'This section does not include live data - only your exported CSV data is shown';
+        
+        banner.innerHTML = `
+            <div class="d-flex align-items-center">
+                <span class="me-2">${icon}</span>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        // Insert banner at the top of the content container
+        contentContainer.insertBefore(banner, contentContainer.firstChild);
     }
 
     // ...existing code...
