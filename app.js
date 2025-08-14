@@ -68,6 +68,18 @@ class LetterboxdViewer {
         this.init();
     }
 
+    // Determine if a usable TMDB API key is configured
+    hasValidTMDBKey() {
+        const key = (this.TMDB_API_KEY || '').trim();
+        if (!key) return false;
+        const placeholders = new Set([
+            'YOUR_TMDB_API_KEY',
+            'your_actual_api_key_here',
+            'your_api_key_here',
+        ]);
+        return !placeholders.has(key);
+    }
+
     // Internal: check if live is enabled for the current user
     isLiveEnabledForCurrentUser() {
         if (!this.currentUser) return false;
@@ -653,7 +665,7 @@ class LetterboxdViewer {
             return this.tmdbCache.get(cacheKey);
         }
         
-        if (!this.TMDB_API_KEY || this.TMDB_API_KEY === 'YOUR_TMDB_API_KEY') {
+    if (!this.hasValidTMDBKey()) {
             // Handle missing API key case
             this.handleTMDBConnectivityError('no_api_key');
             
@@ -1172,7 +1184,9 @@ class LetterboxdViewer {
         const paginationContainer = document.getElementById('diary-pagination');
         
         // Show loading indicator
-        this.showSectionLoading('diary');
+        if (this.hasValidTMDBKey()) {
+            this.showSectionLoading('diary');
+        }
         
     // Combine CSV diary data with live RSS data if enabled
     let diaryData = [...this.data.diary];
@@ -1210,7 +1224,7 @@ class LetterboxdViewer {
         }
         
         // Hide loading and show content
-        this.hideSectionLoading('diary');
+    this.hideSectionLoading('diary');
         container.innerHTML = html;
         paginationContainer.innerHTML = this.createPagination('diary', sortedData.length);
     }
@@ -1401,8 +1415,10 @@ class LetterboxdViewer {
             return;
         }
         
-        // Show loading indicator
-        this.showSectionLoading('allFilms');
+        // Show loading indicator (skip if no valid TMDB key)
+        if (this.hasValidTMDBKey()) {
+            this.showSectionLoading('allFilms');
+        }
         
         // Use watched data - these are all films marked as watched
         // Merge rating data from diary and ratings before sorting
@@ -1436,8 +1452,8 @@ class LetterboxdViewer {
             html += await this.createMovieCard(filmWithDiaryInfo, !!diaryEntry); // Show diary info only if it exists
         }
         
-        // Hide loading and show content
-        this.hideSectionLoading('allFilms');
+    // Hide loading and show content
+    this.hideSectionLoading('allFilms');
         container.innerHTML = html;
         paginationContainer.innerHTML = this.createPagination('allFilms', sortedData.length);
     }
@@ -1515,8 +1531,10 @@ class LetterboxdViewer {
             return;
         }
         
-        // Show loading indicator
-        this.showSectionLoading('watchlist');
+        // Show loading indicator (skip if no valid TMDB key)
+        if (this.hasValidTMDBKey()) {
+            this.showSectionLoading('watchlist');
+        }
         
         const sortedData = this.sortData(this.data.watchlist, this.pagination.watchlist);
         const paginatedData = this.paginateData(sortedData, this.pagination.watchlist);
@@ -1526,8 +1544,8 @@ class LetterboxdViewer {
             html += await this.createMovieCard(item, false);
         }
         
-        // Hide loading and show content
-        this.hideSectionLoading('watchlist');
+    // Hide loading and show content
+    this.hideSectionLoading('watchlist');
         container.innerHTML = html;
         paginationContainer.innerHTML = this.createPagination('watchlist', sortedData.length);
     }
@@ -1593,8 +1611,10 @@ class LetterboxdViewer {
             return;
         }
         
-        // Show loading indicator
-        this.showSectionLoading('reviews');
+        // Show loading indicator (skip if no valid TMDB key)
+        if (this.hasValidTMDBKey()) {
+            this.showSectionLoading('reviews');
+        }
         
         const sortedData = this.sortData(reviewsWithText, this.pagination.reviews);
         const paginatedData = this.paginateData(sortedData, this.pagination.reviews);
@@ -1604,8 +1624,8 @@ class LetterboxdViewer {
             html += await this.createReviewCard(review);
         }
         
-        // Hide loading and show content
-        this.hideSectionLoading('reviews');
+    // Hide loading and show content
+    this.hideSectionLoading('reviews');
         container.innerHTML = html;
         paginationContainer.innerHTML = this.createPagination('reviews', sortedData.length);
     }
