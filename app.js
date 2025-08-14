@@ -557,12 +557,12 @@ class LetterboxdViewer {
             this.showToast('Live data disabled', 'info');
         }
         
-        // Refresh current view
-        if (this.currentSection === 'dashboard') {
+    // Refresh current view
+    if (this.currentSection === 'dashboard') {
             this.showDashboard();
         } else if (this.currentSection === 'diary') {
             this.renderDiary();
-        } else if (this.currentSection === 'allFilms') {
+    } else if (this.currentSection === 'all-films' || this.currentSection === 'allFilms') {
             this.renderAllFilms();
         }
     }
@@ -1360,8 +1360,17 @@ class LetterboxdViewer {
         const container = document.getElementById('all-films-content');
         const paginationContainer = document.getElementById('all-films-pagination');
         
-        // Add live data banner
-        this.showLiveDataBanner('all-films', false); // false = does not have live data
+        // Add live data banner only when live data is enabled
+        const liveDataSwitch = document.getElementById('liveDataSwitch');
+        const liveEnabled = liveDataSwitch && liveDataSwitch.checked && window.letterboxdRSS && window.letterboxdRSS.isLiveDataAvailable();
+        if (liveEnabled) {
+            // Watched page does not include live data; show explanatory banner only when live data is ON
+            this.showLiveDataBanner('all-films', false);
+        } else {
+            // Ensure banner is removed when live data is OFF
+            const existingBanner = document.querySelector('#all-films .live-data-banner');
+            if (existingBanner) existingBanner.remove();
+        }
         
         // Use watched data as the primary source for "All Films" - this contains all films marked as watched
         if (this.data.watched.length === 0) {
