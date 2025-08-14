@@ -226,6 +226,46 @@ class LetterboxdViewer {
         `;
         
         container.innerHTML = html;
+
+        // In multi-user mode, surface TMDB status toasts immediately on the selection screen
+        try {
+            this.checkTMDBStatusOnUserSelect();
+        } catch (e) {
+            // non-blocking
+        }
+    }
+
+    // Proactively check TMDB key and connectivity on user select screen (multi-user mode)
+    async checkTMDBStatusOnUserSelect() {
+        // If user has dismissed TMDB errors permanently, skip
+        if (localStorage.getItem('tmdb_errors_dismissed') === 'true') return;
+
+        // Missing or placeholder key
+        if (!this.hasValidTMDBKey()) {
+            this.handleTMDBConnectivityError('no_api_key');
+            return;
+        }
+
+        // With a key, do a tiny configuration check to validate key and connectivity
+        try {
+            const url = `${this.TMDB_BASE_URL}/configuration?api_key=${this.TMDB_API_KEY}`;
+            const resp = await fetch(url, { method: 'GET' });
+            if (resp.status === 401) {
+                // Invalid/unauthorized key
+                this.handleTMDBConnectivityError('invalid_api_key');
+                return;
+            }
+            if (!resp.ok) {
+                // Other HTTP errors
+                this.handleTMDBConnectivityError('connectivity');
+                return;
+            }
+            // OK: mark as online
+            this.tmdbConnectivity.isOnline = true;
+        } catch (_) {
+            // Network failure
+            this.handleTMDBConnectivityError('connectivity');
+        }
     }
     
     async selectUser(userId) {
