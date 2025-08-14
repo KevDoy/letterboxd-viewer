@@ -80,6 +80,16 @@ class LetterboxdViewer {
         return !placeholders.has(key);
     }
 
+    // Determine Letterboxd username, preferring the export profile value
+    getLetterboxdUsername() {
+        const fromProfile = (this.data && this.data.profile && this.data.profile.Username) ? String(this.data.profile.Username).trim() : '';
+        if (fromProfile) return fromProfile;
+        const fromConfig = (this.currentUser && this.currentUser.letterboxdUsername) ? String(this.currentUser.letterboxdUsername).trim() : '';
+        if (fromConfig) return fromConfig;
+        // Fallback to user id as last resort
+        return this.currentUser ? String(this.currentUser.id || '').trim() : '';
+    }
+
     // Internal: check if live is enabled for the current user
     isLiveEnabledForCurrentUser() {
         if (!this.currentUser) return false;
@@ -576,7 +586,7 @@ class LetterboxdViewer {
     // Internal state: persist in-memory and optionally in localStorage per user
     if (this._liveDataState == null) this._liveDataState = {};
     const userKey = this.currentUser.id;
-    const username = this.currentUser.letterboxdUsername || this.currentUser.id;
+    const username = this.getLetterboxdUsername();
     const defaultEnabled = this.currentUser.enableLiveData === true;
     const stored = localStorage.getItem(`live_enabled_${userKey}`);
     const enabled = stored == null ? false : stored === 'true';
@@ -602,7 +612,7 @@ class LetterboxdViewer {
             
             try {
                 // Test RSS access first
-                const hasAccess = await window.letterboxdRSS.testRSSAccess(this.currentUser.letterboxdUsername);
+                const hasAccess = await window.letterboxdRSS.testRSSAccess(this.getLetterboxdUsername());
                 if (!hasAccess) {
                     throw new Error('RSS feed not accessible');
                 }
