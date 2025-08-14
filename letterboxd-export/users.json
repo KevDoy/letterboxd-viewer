@@ -18,6 +18,8 @@
       "id": "Jonah", 
       "displayName": "Jonah",
       "folder": "Jonah",
+      "enableLiveData": true,
+      "letterboxdUsername": "jonahathey",
       "lastUpdated": "2025-07-31",
       "lists": [
         "2023-top-10.csv",
