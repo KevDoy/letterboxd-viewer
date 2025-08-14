@@ -734,7 +734,8 @@ class LetterboxdViewer {
             const mediaType = tmdbData.media_type || 'movie';
             return `https://www.themoviedb.org/${mediaType}/${tmdbData.tmdb_id}`;
         } else {
-            return `https://www.themoviedb.org/search?query=${encodeURIComponent(filmName + ' ' + filmYear)}`;
+            // Fallback to TMDB search using only the title to maximize results
+            return `https://www.themoviedb.org/search?query=${encodeURIComponent(filmName)}`;
         }
     }
     
