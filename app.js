@@ -136,6 +136,7 @@ class LetterboxdViewer {
                 this.showNavigation();
                 this.showDashboard();
                 this.updateNavigation();
+                // In single-user mode, profile is now clickable to open the switcher
             } else {
                 // Multiple users available - show user selection interface
                 this.showUserSelection();
@@ -532,24 +533,12 @@ class LetterboxdViewer {
         
         // Update profile info styling based on mode
         if (profileInfo) {
-            if (this.currentUser.isSingleUserMode || this.users.length <= 1) {
-                // In single user mode, make it non-clickable
-                profileInfo.style.cursor = 'default';
-                profileInfo.onclick = null;
-                // Hide the dropdown chevron
-                const chevron = profileInfo.querySelector('.bi-chevron-down');
-                if (chevron) {
-                    chevron.style.display = 'none';
-                }
-            } else {
-                // In multi-user mode, make it clickable
-                profileInfo.style.cursor = 'pointer';
-                profileInfo.onclick = () => this.showUserSwitcher();
-                // Show the dropdown chevron
-                const chevron = profileInfo.querySelector('.bi-chevron-down');
-                if (chevron) {
-                    chevron.style.display = 'inline';
-                }
+            // Always allow opening the switcher to access Live Data toggle, even in single-user mode
+            profileInfo.style.cursor = 'pointer';
+            profileInfo.onclick = () => this.showUserSwitcher();
+            const chevron = profileInfo.querySelector('.bi-chevron-down');
+            if (chevron) {
+                chevron.style.display = 'inline';
             }
         }
         
@@ -2065,10 +2054,7 @@ class LetterboxdViewer {
     }
     
     showUserSwitcher() {
-        // Don't show switcher in single user mode or if only one user
-        if (this.users.length <= 1 || (this.currentUser && this.currentUser.isSingleUserMode)) {
-            return;
-        }
+    // Always allow the switcher, even for single-user mode (to expose Live Data toggle)
         
         // Create a modal or dropdown for user switching
         const existingModal = document.getElementById('userSwitcherModal');
@@ -2090,7 +2076,7 @@ class LetterboxdViewer {
                             <p class="text-muted mb-3">Select a different Letterboxd export to view:</p>
         `;
         
-        for (const user of this.users) {
+    for (const user of this.users) {
             const isActive = user.id === this.currentUser.id;
             const lastUpdated = user.lastUpdated ? new Date(user.lastUpdated).toLocaleDateString() : 'Unknown';
             if (isActive) {
@@ -2116,7 +2102,7 @@ class LetterboxdViewer {
                         </div>
                     </div>
                 `;
-            } else {
+            } else if (this.users.length > 1) {
                 html += `
                     <button class="btn btn-outline-primary user-select-btn mb-2 w-100" 
                             onclick="app.switchToUser('${user.id}')">
