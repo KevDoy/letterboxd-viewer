@@ -67,6 +67,39 @@ class LetterboxdViewer {
         
         this.init();
     }
+
+    // Determine if a usable TMDB API key is configured
+    hasValidTMDBKey() {
+        const key = (this.TMDB_API_KEY || '').trim();
+        if (!key) return false;
+        const placeholders = new Set([
+            'YOUR_TMDB_API_KEY',
+            'your_actual_api_key_here',
+            'your_api_key_here',
+        ]);
+        return !placeholders.has(key);
+    }
+
+    // Determine Letterboxd username, preferring the export profile value
+    getLetterboxdUsername() {
+        const fromProfile = (this.data && this.data.profile && this.data.profile.Username) ? String(this.data.profile.Username).trim() : '';
+        if (fromProfile) return fromProfile;
+        const fromConfig = (this.currentUser && this.currentUser.letterboxdUsername) ? String(this.currentUser.letterboxdUsername).trim() : '';
+        if (fromConfig) return fromConfig;
+        // Fallback to user id as last resort
+        return this.currentUser ? String(this.currentUser.id || '').trim() : '';
+    }
+
+    // Internal: check if live is enabled for the current user
+    isLiveEnabledForCurrentUser() {
+        if (!this.currentUser) return false;
+        const key = `live_enabled_${this.currentUser.id}`;
+        const stored = localStorage.getItem(key);
+        if (stored == null && this._liveDataState && this._liveDataState[this.currentUser.id] != null) {
+            return !!this._liveDataState[this.currentUser.id];
+        }
+        return stored === 'true';
+    }
     
     async init() {
         try {
@@ -103,6 +136,7 @@ class LetterboxdViewer {
                 this.showNavigation();
                 this.showDashboard();
                 this.updateNavigation();
+                // In single-user mode, profile is now clickable to open the switcher
             } else {
                 // Multiple users available - show user selection interface
                 this.showUserSelection();
@@ -203,6 +237,46 @@ class LetterboxdViewer {
         `;
         
         container.innerHTML = html;
+
+        // In multi-user mode, surface TMDB status toasts immediately on the selection screen
+        try {
+            this.checkTMDBStatusOnUserSelect();
+        } catch (e) {
+            // non-blocking
+        }
+    }
+
+    // Proactively check TMDB key and connectivity on user select screen (multi-user mode)
+    async checkTMDBStatusOnUserSelect() {
+        // If user has dismissed TMDB errors permanently, skip
+        if (localStorage.getItem('tmdb_errors_dismissed') === 'true') return;
+
+        // Missing or placeholder key
+        if (!this.hasValidTMDBKey()) {
+            this.handleTMDBConnectivityError('no_api_key');
+            return;
+        }
+
+        // With a key, do a tiny configuration check to validate key and connectivity
+        try {
+            const url = `${this.TMDB_BASE_URL}/configuration?api_key=${this.TMDB_API_KEY}`;
+            const resp = await fetch(url, { method: 'GET' });
+            if (resp.status === 401) {
+                // Invalid/unauthorized key
+                this.handleTMDBConnectivityError('invalid_api_key');
+                return;
+            }
+            if (!resp.ok) {
+                // Other HTTP errors
+                this.handleTMDBConnectivityError('connectivity');
+                return;
+            }
+            // OK: mark as online
+            this.tmdbConnectivity.isOnline = true;
+        } catch (_) {
+            // Network failure
+            this.handleTMDBConnectivityError('connectivity');
+        }
     }
     
     async selectUser(userId) {
@@ -459,24 +533,12 @@ class LetterboxdViewer {
         
         // Update profile info styling based on mode
         if (profileInfo) {
-            if (this.currentUser.isSingleUserMode || this.users.length <= 1) {
-                // In single user mode, make it non-clickable
-                profileInfo.style.cursor = 'default';
-                profileInfo.onclick = null;
-                // Hide the dropdown chevron
-                const chevron = profileInfo.querySelector('.bi-chevron-down');
-                if (chevron) {
-                    chevron.style.display = 'none';
-                }
-            } else {
-                // In multi-user mode, make it clickable
-                profileInfo.style.cursor = 'pointer';
-                profileInfo.onclick = () => this.showUserSwitcher();
-                // Show the dropdown chevron
-                const chevron = profileInfo.querySelector('.bi-chevron-down');
-                if (chevron) {
-                    chevron.style.display = 'inline';
-                }
+            // Always allow opening the switcher to access Live Data toggle, even in single-user mode
+            profileInfo.style.cursor = 'pointer';
+            profileInfo.onclick = () => this.showUserSwitcher();
+            const chevron = profileInfo.querySelector('.bi-chevron-down');
+            if (chevron) {
+                chevron.style.display = 'inline';
             }
         }
         
@@ -488,6 +550,119 @@ class LetterboxdViewer {
                 const film = this.findFilmByUrl(url);
                 return film;
             }).filter(Boolean);
+        }
+        
+        // Snapshot original CSV-only data needed for reverting live merges
+        try {
+            this._csvSnapshot = this._csvSnapshot || {};
+            // Deep copy diary only (others remain unchanged by live merges)
+            this._csvSnapshot.diary = JSON.parse(JSON.stringify(this.data.diary || []));
+        } catch (e) {
+            // Fallback shallow copy
+            this._csvSnapshot = this._csvSnapshot || {};
+            this._csvSnapshot.diary = (this.data.diary || []).map(x => ({ ...x }));
+        }
+
+        // Initialize RSS live data
+        this.initializeLiveData();
+    }
+    
+    // RSS Live Data Integration
+    initializeLiveData() {
+    // Prepare internal live data state and initialize RSS manager
+    if (!this.currentUser) return;
+
+    // Internal state: persist in-memory and optionally in localStorage per user
+    if (this._liveDataState == null) this._liveDataState = {};
+    const userKey = this.currentUser.id;
+    const username = this.getLetterboxdUsername();
+    const defaultEnabled = this.currentUser.enableLiveData === true;
+    const stored = localStorage.getItem(`live_enabled_${userKey}`);
+    const enabled = stored == null ? false : stored === 'true';
+    this._liveDataState[userKey] = enabled;
+
+    // Initialize RSS manager (enabled flag just gates availability; fetching is on toggle)
+    window.letterboxdRSS.init(username, defaultEnabled);
+    }
+
+    async toggleLiveData(enabled) {
+        // Persist per-user preference
+        if (this.currentUser) {
+            localStorage.setItem(`live_enabled_${this.currentUser.id}`, enabled ? 'true' : 'false');
+            if (!this._liveDataState) this._liveDataState = {};
+            this._liveDataState[this.currentUser.id] = enabled;
+        }
+
+        if (enabled) {
+            console.log('Live data enabled - fetching RSS data...');
+            
+            // Show toast notification
+            this.showToast('Enabling live data...', 'info');
+            
+            try {
+                // Test RSS access first
+                const hasAccess = await window.letterboxdRSS.testRSSAccess(this.getLetterboxdUsername());
+                if (!hasAccess) {
+                    throw new Error('RSS feed not accessible');
+                }
+                
+                // Merge RSS data with existing data
+                await this.mergeRSSData();
+                
+                this.showToast('Live data enabled! 📡', 'success');
+            } catch (error) {
+                console.error('Failed to enable live data:', error);
+                this.showToast('Failed to enable live data: ' + error.message, 'error');
+                
+                // Reset UI toggles on error (modal toggle if present)
+                const modalSwitch = document.getElementById('selectedUserLiveSwitch');
+                if (modalSwitch) modalSwitch.checked = false;
+            }
+        } else {
+            console.log('Live data disabled - reverting to CSV data');
+            this.showToast('Live data disabled', 'info');
+            // Restore original CSV-only diary data
+            if (this._csvSnapshot && Array.isArray(this._csvSnapshot.diary)) {
+                try {
+                    this.data.diary = JSON.parse(JSON.stringify(this._csvSnapshot.diary));
+                } catch (_) {
+                    this.data.diary = (this._csvSnapshot.diary || []).map(x => ({ ...x }));
+                }
+            }
+        }
+        
+    // Refresh current view
+    if (this.currentSection === 'dashboard') {
+            this.showDashboard();
+        } else if (this.currentSection === 'diary') {
+            this.renderDiary();
+    } else if (this.currentSection === 'all-films' || this.currentSection === 'allFilms') {
+            this.renderAllFilms();
+        }
+    }
+
+    async mergeRSSData() {
+        if (!window.letterboxdRSS || !window.letterboxdRSS.isLiveDataAvailable()) {
+            return;
+        }
+
+        try {
+            // Merge diary data with smart date filtering
+            const originalDiaryLength = this.data.diary.length;
+            this.data.diary = await window.letterboxdRSS.mergeWithDiaryData(this.data.diary);
+            const newDiaryEntries = this.data.diary.length - originalDiaryLength;
+            
+            console.log(`RSS merge complete: +${newDiaryEntries} diary entries`);
+            
+            if (newDiaryEntries > 0) {
+                this.showToast(`Added ${newDiaryEntries} new diary entries`, 'success');
+            } else {
+                this.showToast('No new entries found in RSS feed', 'info');
+            }
+            
+        } catch (error) {
+            console.error('Failed to merge RSS data:', error);
+            throw error;
         }
     }
     
@@ -529,7 +704,7 @@ class LetterboxdViewer {
             return this.tmdbCache.get(cacheKey);
         }
         
-        if (!this.TMDB_API_KEY || this.TMDB_API_KEY === 'YOUR_TMDB_API_KEY') {
+    if (!this.hasValidTMDBKey()) {
             // Handle missing API key case
             this.handleTMDBConnectivityError('no_api_key');
             
@@ -629,7 +804,8 @@ class LetterboxdViewer {
             const mediaType = tmdbData.media_type || 'movie';
             return `https://www.themoviedb.org/${mediaType}/${tmdbData.tmdb_id}`;
         } else {
-            return `https://www.themoviedb.org/search?query=${encodeURIComponent(filmName + ' ' + filmYear)}`;
+            // Fallback to TMDB search using only the title to maximize results
+            return `https://www.themoviedb.org/search?query=${encodeURIComponent(filmName)}`;
         }
     }
     
@@ -917,9 +1093,30 @@ class LetterboxdViewer {
     
     async renderRecentActivity() {
         const recentContainer = document.getElementById('recent-activity');
+        
+    // Combine CSV diary data with live RSS data if enabled
+    let diaryData = [...this.data.diary];
+        
+        // Check if live data is enabled
+    const liveEnabled = this.isLiveEnabledForCurrentUser();
+    if (liveEnabled && window.letterboxdRSS && window.letterboxdRSS.isLiveDataAvailable()) {
+            try {
+                const liveEntries = await window.letterboxdRSS.getRecentDiaryEntries(10);
+                // Use smart merging to avoid duplicates and only show newer entries
+                diaryData = this.mergeLiveDataWithCSV(this.data.diary, liveEntries, {
+                    maxLiveEntries: 10,
+                    onlyNewerThanLatest: true,
+                    strictDuplicateCheck: true
+                });
+                console.log(`Recent activity: merged data now has ${diaryData.length} entries`);
+            } catch (error) {
+                console.warn('Failed to fetch live activity entries:', error);
+            }
+        }
+        
         // Sort by date descending (newest first), then slice
-        const recentEntries = [...this.data.diary]
-            .sort((a, b) => new Date(b.Date) - new Date(a.Date))
+        const recentEntries = [...diaryData]
+            .sort((a, b) => new Date(b.Date || b.WatchedDate) - new Date(a.Date || a.WatchedDate))
             .slice(0, 5);
         
         if (recentEntries.length === 0) {
@@ -931,30 +1128,34 @@ class LetterboxdViewer {
         for (const entry of recentEntries) {
             const rating = this.formatStarRating(entry.Rating);
             const rewatch = entry.Rewatch === 'Yes' ? '<span class="badge bg-info">Rewatch</span>' : '';
+            const isLiveData = entry.isLiveData === true;
+            const liveBadge = isLiveData ? '<i class="bi bi-rss text-success ms-1" title="Live Data"></i>' : '';
+            const watchDate = entry.Date || entry.WatchedDate;
             
             html += `
                 <div class="activity-item">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <strong class="activity-title">${entry.Name}</strong> <span class="activity-year">(${entry.Year})</span>
+                            <strong class="activity-title">${entry.Name}</strong> <span class="activity-year">(${entry.Year})</span>${liveBadge}
                             <div class="activity-meta">
                                 ${rating && `<span class="star-rating">${rating}</span>`}
                                 ${rewatch}
                                 ${entry.Tags ? `<span class="tag">${entry.Tags}</span>` : ''}
                             </div>
                         </div>
-                        <small class="activity-date">${new Date(entry.Date).toLocaleDateString()}</small>
+                        <small class="activity-date">${watchDate ? new Date(watchDate).toLocaleDateString() : 'Recently'}</small>
                     </div>
                 </div>
             `;
         }
         
         // Add "View More" link if there are more entries
-        if (this.data.diary.length > 5) {
+        const totalEntries = diaryData.length;
+        if (totalEntries > 5) {
             html += `
                 <div class="text-center mt-3">
                     <a href="#" onclick="app.showDiary()" class="btn btn-outline-primary btn-sm">
-                        View All Activity (${this.data.diary.length} total)
+                        View All Activity (${totalEntries} total)
                     </a>
                 </div>
             `;
@@ -1021,16 +1222,39 @@ class LetterboxdViewer {
         const container = document.getElementById('diary-content');
         const paginationContainer = document.getElementById('diary-pagination');
         
-        if (this.data.diary.length === 0) {
+        // Show loading indicator
+        if (this.hasValidTMDBKey()) {
+            this.showSectionLoading('diary');
+        }
+        
+    // Combine CSV diary data with live RSS data if enabled
+    let diaryData = [...this.data.diary];
+        
+        // Check if live data is enabled
+    const liveEnabled = this.isLiveEnabledForCurrentUser();
+    if (liveEnabled && window.letterboxdRSS && window.letterboxdRSS.isLiveDataAvailable()) {
+            try {
+                const liveEntries = await window.letterboxdRSS.getRecentDiaryEntries(50); // More entries for diary view
+                // Use smart merging to avoid duplicates and only show newer entries
+                diaryData = this.mergeLiveDataWithCSV(this.data.diary, liveEntries, {
+                    maxLiveEntries: 50,
+                    onlyNewerThanLatest: true,
+                    strictDuplicateCheck: true
+                });
+                console.log(`Diary view: merged data now has ${diaryData.length} entries`);
+            } catch (error) {
+                console.warn('Failed to fetch live diary entries:', error);
+            }
+        }
+        
+        if (diaryData.length === 0) {
             container.innerHTML = '<div class="col-12"><p class="text-muted">No diary entries found.</p></div>';
             paginationContainer.innerHTML = '';
+            this.hideSectionLoading('diary');
             return;
         }
         
-        // Show loading indicator
-        this.showSectionLoading('diary');
-        
-        const sortedData = this.sortData(this.data.diary, this.pagination.diary);
+        const sortedData = this.sortData(diaryData, this.pagination.diary);
         const paginatedData = this.paginateData(sortedData, this.pagination.diary);
         
         let html = '';
@@ -1039,7 +1263,7 @@ class LetterboxdViewer {
         }
         
         // Hide loading and show content
-        this.hideSectionLoading('diary');
+    this.hideSectionLoading('diary');
         container.innerHTML = html;
         paginationContainer.innerHTML = this.createPagination('diary', sortedData.length);
     }
@@ -1212,6 +1436,17 @@ class LetterboxdViewer {
         const container = document.getElementById('all-films-content');
         const paginationContainer = document.getElementById('all-films-pagination');
         
+        // Add live data banner only when live data is enabled
+    const liveEnabled = this.isLiveEnabledForCurrentUser() && window.letterboxdRSS && window.letterboxdRSS.isLiveDataAvailable();
+        if (liveEnabled) {
+            // Watched page does not include live data; show explanatory banner only when live data is ON
+            this.showLiveDataBanner('all-films', false);
+        } else {
+            // Ensure banner is removed when live data is OFF
+            const existingBanner = document.querySelector('#all-films .live-data-banner');
+            if (existingBanner) existingBanner.remove();
+        }
+        
         // Use watched data as the primary source for "All Films" - this contains all films marked as watched
         if (this.data.watched.length === 0) {
             container.innerHTML = '<div class="col-12"><p class="text-muted">No watched films found. Mark some films as watched on Letterboxd to see them here.</p></div>';
@@ -1219,8 +1454,10 @@ class LetterboxdViewer {
             return;
         }
         
-        // Show loading indicator
-        this.showSectionLoading('allFilms');
+        // Show loading indicator (skip if no valid TMDB key)
+        if (this.hasValidTMDBKey()) {
+            this.showSectionLoading('allFilms');
+        }
         
         // Use watched data - these are all films marked as watched
         // Merge rating data from diary and ratings before sorting
@@ -1254,8 +1491,8 @@ class LetterboxdViewer {
             html += await this.createMovieCard(filmWithDiaryInfo, !!diaryEntry); // Show diary info only if it exists
         }
         
-        // Hide loading and show content
-        this.hideSectionLoading('allFilms');
+    // Hide loading and show content
+    this.hideSectionLoading('allFilms');
         container.innerHTML = html;
         paginationContainer.innerHTML = this.createPagination('allFilms', sortedData.length);
     }
@@ -1333,8 +1570,10 @@ class LetterboxdViewer {
             return;
         }
         
-        // Show loading indicator
-        this.showSectionLoading('watchlist');
+        // Show loading indicator (skip if no valid TMDB key)
+        if (this.hasValidTMDBKey()) {
+            this.showSectionLoading('watchlist');
+        }
         
         const sortedData = this.sortData(this.data.watchlist, this.pagination.watchlist);
         const paginatedData = this.paginateData(sortedData, this.pagination.watchlist);
@@ -1344,8 +1583,8 @@ class LetterboxdViewer {
             html += await this.createMovieCard(item, false);
         }
         
-        // Hide loading and show content
-        this.hideSectionLoading('watchlist');
+    // Hide loading and show content
+    this.hideSectionLoading('watchlist');
         container.innerHTML = html;
         paginationContainer.innerHTML = this.createPagination('watchlist', sortedData.length);
     }
@@ -1360,22 +1599,25 @@ class LetterboxdViewer {
         const rating = this.formatStarRating(film.Rating);
         const rewatch = film.Rewatch === 'Yes' ? '<span class="badge bg-info">Rewatch</span>' : '';
         const tags = film.Tags ? film.Tags.split(',').map(tag => `<span class="tag">${tag.trim()}</span>`).join('') : '';
+        const isLiveData = film.isLiveData === true;
+        const liveBadge = isLiveData ? '<span class="badge bg-success ms-1"><i class="bi bi-rss"></i> Live</span>' : '';
         
         return `
             <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
                 <div class="card movie-card" onclick="window.open('${tmdbUrl}', '_blank')">
                     <div class="movie-poster-container">
                         <img src="${posterUrl}" class="movie-poster" alt="${film.Name}" loading="lazy">
+                        ${isLiveData ? '<div class="live-data-indicator"><i class="bi bi-rss"></i></div>' : ''}
                     </div>
                     <div class="card-body">
-                        <h6 class="movie-title">${film.Name}</h6>
+                        <h6 class="movie-title">${film.Name}${liveBadge}</h6>
                         <p class="movie-year mb-2">${film.Year}</p>
                         ${showDiaryInfo ? `
                             <div class="movie-meta">
                                 ${rating && `<div class="star-rating mb-1">${rating}</div>`}
                                 ${rewatch}
                                 ${tags}
-                                ${film.Date ? `<small class="text-muted d-block mt-2">Watched: ${new Date(film.Date).toLocaleDateString()}</small>` : ''}
+                                ${film.Date || film.WatchedDate ? `<small class="text-muted d-block mt-2">Watched: ${new Date(film.Date || film.WatchedDate).toLocaleDateString()}</small>` : ''}
                             </div>
                         ` : ''}
                     </div>
@@ -1408,8 +1650,10 @@ class LetterboxdViewer {
             return;
         }
         
-        // Show loading indicator
-        this.showSectionLoading('reviews');
+        // Show loading indicator (skip if no valid TMDB key)
+        if (this.hasValidTMDBKey()) {
+            this.showSectionLoading('reviews');
+        }
         
         const sortedData = this.sortData(reviewsWithText, this.pagination.reviews);
         const paginatedData = this.paginateData(sortedData, this.pagination.reviews);
@@ -1419,8 +1663,8 @@ class LetterboxdViewer {
             html += await this.createReviewCard(review);
         }
         
-        // Hide loading and show content
-        this.hideSectionLoading('reviews');
+    // Hide loading and show content
+    this.hideSectionLoading('reviews');
         container.innerHTML = html;
         paginationContainer.innerHTML = this.createPagination('reviews', sortedData.length);
     }
@@ -1810,10 +2054,7 @@ class LetterboxdViewer {
     }
     
     showUserSwitcher() {
-        // Don't show switcher in single user mode or if only one user
-        if (this.users.length <= 1 || (this.currentUser && this.currentUser.isSingleUserMode)) {
-            return;
-        }
+    // Always allow the switcher, even for single-user mode (to expose Live Data toggle)
         
         // Create a modal or dropdown for user switching
         const existingModal = document.getElementById('userSwitcherModal');
@@ -1835,25 +2076,48 @@ class LetterboxdViewer {
                             <p class="text-muted mb-3">Select a different Letterboxd export to view:</p>
         `;
         
-        for (const user of this.users) {
+    for (const user of this.users) {
             const isActive = user.id === this.currentUser.id;
             const lastUpdated = user.lastUpdated ? new Date(user.lastUpdated).toLocaleDateString() : 'Unknown';
-            html += `
-                <button class="btn ${isActive ? 'btn-success' : 'btn-outline-primary'} user-select-btn mb-2 w-100" 
-                        onclick="app.switchToUser('${user.id}')"
-                        ${isActive ? 'disabled' : ''}>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="text-start">
-                            <div>
-                                <i class="bi bi-person"></i> ${user.displayName}
-                                ${isActive ? '<i class="bi bi-check-circle-fill ms-2"></i>' : ''}
+            if (isActive) {
+                // Selected user: show live toggle on the right with label above the switch
+                const enabled = this.isLiveEnabledForCurrentUser();
+                html += `
+                    <div class="btn btn-success user-select-btn mb-2 w-100" style="cursor: default;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-start">
+                                <div>
+                                    <i class="bi bi-person"></i> ${user.displayName}
+                                    <i class="bi bi-check-circle-fill ms-2"></i>
+                                </div>
+                                <small class="text-muted">Last updated: ${lastUpdated}</small>
                             </div>
-                            <small class="text-muted">Last updated: ${lastUpdated}</small>
+                            <div class="live-toggle-container ms-3 text-end" title="Live Data" style="pointer-events: auto;">
+                                <div class="live-toggle-label">Live Data <i class="bi bi-rss"></i></div>
+                                <div class="form-check form-switch justify-content-end d-flex mt-1">
+                                    <input class="form-check-input" type="checkbox" id="selectedUserLiveSwitch" ${enabled ? 'checked' : ''}>
+                                    <label class="form-check-label visually-hidden" for="selectedUserLiveSwitch">Live Data</label>
+                                </div>
+                            </div>
                         </div>
-                        ${!isActive ? '<i class="bi bi-chevron-right"></i>' : ''}
                     </div>
-                </button>
-            `;
+                `;
+            } else if (this.users.length > 1) {
+                html += `
+                    <button class="btn btn-outline-primary user-select-btn mb-2 w-100" 
+                            onclick="app.switchToUser('${user.id}')">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-start">
+                                <div>
+                                    <i class="bi bi-person"></i> ${user.displayName}
+                                </div>
+                                <small class="text-muted">Last updated: ${lastUpdated}</small>
+                            </div>
+                            <i class="bi bi-chevron-right"></i>
+                        </div>
+                    </button>
+                `;
+            }
         }
         
         html += `
@@ -1867,11 +2131,20 @@ class LetterboxdViewer {
         document.body.insertAdjacentHTML('beforeend', html);
         
         // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('userSwitcherModal'));
+        const modalEl = document.getElementById('userSwitcherModal');
+        const modal = new bootstrap.Modal(modalEl);
         modal.show();
+
+        // Hook up selected user live toggle
+        const selectedLiveSwitch = document.getElementById('selectedUserLiveSwitch');
+        if (selectedLiveSwitch) {
+            selectedLiveSwitch.addEventListener('change', () => {
+                this.toggleLiveData(selectedLiveSwitch.checked);
+            });
+        }
         
         // Clean up when modal is hidden
-        document.getElementById('userSwitcherModal').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('userSwitcherModal').addEventListener('hidden.bs.modal', function() {
             this.remove();
         });
     }
@@ -1920,6 +2193,168 @@ class LetterboxdViewer {
         }
     }
     
+    // Smart Live Data Merging Functions
+    
+    /**
+     * Merge live RSS data with CSV data, avoiding duplicates intelligently
+     */
+    mergeLiveDataWithCSV(csvData, liveData, options = {}) {
+        if (!liveData || liveData.length === 0) {
+            return csvData;
+        }
+        
+        const { 
+            maxLiveEntries = 20, 
+            onlyNewerThanLatest = true,
+            strictDuplicateCheck = true 
+        } = options;
+        
+        console.log(`Merging ${csvData.length} CSV entries with ${liveData.length} live entries`);
+        
+        // Find the latest date in CSV data
+        let latestCSVDate = null;
+        if (onlyNewerThanLatest && csvData.length > 0) {
+            const dates = csvData
+                .map(entry => entry.Date || entry.WatchedDate || entry['Watched Date'])
+                .filter(date => date)
+                .map(date => new Date(date))
+                .filter(date => !isNaN(date));
+            
+            if (dates.length > 0) {
+                latestCSVDate = new Date(Math.max(...dates));
+                console.log('Latest CSV date found:', latestCSVDate.toISOString().split('T')[0]);
+            }
+        }
+        
+        // Filter live data to only include entries newer than latest CSV entry
+        let filteredLiveData = liveData;
+        if (latestCSVDate) {
+            filteredLiveData = liveData.filter(entry => {
+                const entryDate = new Date(entry.WatchedDate || entry.Date);
+                return entryDate > latestCSVDate;
+            });
+            console.log(`Filtered to ${filteredLiveData.length} live entries newer than ${latestCSVDate.toISOString().split('T')[0]}`);
+        }
+        
+        // If no new live entries, return original CSV data
+        if (filteredLiveData.length === 0) {
+            console.log('No new live entries to merge');
+            return csvData;
+        }
+        
+        // Limit the number of live entries
+        filteredLiveData = filteredLiveData.slice(0, maxLiveEntries);
+        
+        // Smart duplicate detection
+        const processedLiveData = this.removeDuplicates(csvData, filteredLiveData, strictDuplicateCheck);
+        
+        console.log(`Final merge: ${processedLiveData.length} new live entries added`);
+        
+        // Merge and sort by date (newest first)
+        const mergedData = [...processedLiveData, ...csvData];
+        return mergedData.sort((a, b) => {
+            const dateA = new Date(a.Date || a.WatchedDate || a['Watched Date']);
+            const dateB = new Date(b.Date || b.WatchedDate || b['Watched Date']);
+            return dateB - dateA;
+        });
+    }
+    
+    /**
+     * Remove duplicates using multiple detection strategies
+     */
+    removeDuplicates(csvData, liveData, strictCheck = true) {
+        if (!strictCheck) {
+            // Simple URI-based deduplication (original method)
+            const existingUrls = new Set(csvData.map(entry => entry['Letterboxd URI'] || entry.LetterboxdURI));
+            return liveData.filter(entry => !existingUrls.has(entry.LetterboxdURI || entry['Letterboxd URI']));
+        }
+        
+        // Advanced duplicate detection using multiple criteria
+        const duplicateKeys = new Set();
+        
+        // Build keys for existing CSV data
+        csvData.forEach(entry => {
+            const keys = this.generateDuplicateKeys(entry);
+            keys.forEach(key => duplicateKeys.add(key));
+        });
+        
+        // Filter live data against these keys
+        return liveData.filter(entry => {
+            const keys = this.generateDuplicateKeys(entry);
+            return !keys.some(key => duplicateKeys.has(key));
+        });
+    }
+    
+    /**
+     * Generate multiple keys for duplicate detection
+     */
+    generateDuplicateKeys(entry) {
+        const keys = [];
+        
+        const title = (entry.Name || entry.title || '').trim().toLowerCase();
+        const year = entry.Year || entry.year;
+        const date = entry.Date || entry.WatchedDate || entry['Watched Date'];
+        const uri = entry['Letterboxd URI'] || entry.LetterboxdURI;
+        
+        // Key 1: URI (if available)
+        if (uri) {
+            keys.push(`uri:${uri}`);
+        }
+        
+        // Key 2: Title + Year
+        if (title && year) {
+            keys.push(`title_year:${title}|${year}`);
+        }
+        
+        // Key 3: Title + Date (for same-day watches)
+        if (title && date) {
+            keys.push(`title_date:${title}|${date}`);
+        }
+        
+        // Key 4: Title only (loose matching)
+        if (title) {
+            keys.push(`title:${title}`);
+        }
+        
+        return keys;
+    }
+
+    // Live data banner system
+    showLiveDataBanner(sectionId, hasLiveData) {
+        // Remove existing banner if it exists
+        const existingBanner = document.querySelector(`#${sectionId} .live-data-banner`);
+        if (existingBanner) {
+            existingBanner.remove();
+        }
+        
+        // Find the section content container
+        const sectionElement = document.getElementById(sectionId);
+        if (!sectionElement) return;
+        
+        // Find the first content container within the section
+        const contentContainer = sectionElement.querySelector('.container-fluid, .container, .row') || sectionElement;
+        
+        // Create banner
+        const banner = document.createElement('div');
+        banner.className = 'live-data-banner alert alert-' + (hasLiveData ? 'success' : 'warning') + ' mb-3';
+        banner.style.marginTop = '10px';
+        
+        const icon = hasLiveData ? '📡' : '⚠️';
+        const message = hasLiveData 
+            ? 'This section includes live data from your Letterboxd RSS feed'
+            : 'This section does not include live data - only your exported CSV data is shown';
+        
+        banner.innerHTML = `
+            <div class="d-flex align-items-center">
+                <span class="me-2">${icon}</span>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        // Insert banner at the top of the content container
+        contentContainer.insertBefore(banner, contentContainer.firstChild);
+    }
+
     // ...existing code...
 }
 
@@ -1964,8 +2399,13 @@ function showLists() {
 }
 function showUserSwitcher() { app.showUserSwitcher(); }
 
-// Initialize the app when the page loads
-let app;
+
+
+// Initialize the application
+const app = new LetterboxdViewer();
+window.viewer = app; // Make accessible to RSS functions
+
+// Start the application when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    app = new LetterboxdViewer();
+    app.init();
 });

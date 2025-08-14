@@ -1,6 +1,6 @@
 {
   "name": "letterboxd-viewer",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "A self-hosted viewer for Letterboxd export data",
   "main": "index.html",
   "scripts": {
