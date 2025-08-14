@@ -2005,10 +2005,10 @@ class LetterboxdViewer {
             const isActive = user.id === this.currentUser.id;
             const lastUpdated = user.lastUpdated ? new Date(user.lastUpdated).toLocaleDateString() : 'Unknown';
             if (isActive) {
-                // Selected user: show live toggle on the right
+                // Selected user: show live toggle on the right with label above the switch
                 const enabled = this.isLiveEnabledForCurrentUser();
                 html += `
-                    <div class="btn btn-success user-select-btn mb-2 w-100 disabled" style="cursor: default;">
+                    <div class="btn btn-success user-select-btn mb-2 w-100" style="cursor: default;">
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="text-start">
                                 <div>
@@ -2017,11 +2017,12 @@ class LetterboxdViewer {
                                 </div>
                                 <small class="text-muted">Last updated: ${lastUpdated}</small>
                             </div>
-                            <div class="form-check form-switch ms-3" title="Live Data">
-                                <input class="form-check-input" type="checkbox" id="selectedUserLiveSwitch" ${enabled ? 'checked' : ''}>
-                                <label class="form-check-label" for="selectedUserLiveSwitch">
-                                    <i class="bi bi-rss"></i>
-                                </label>
+                            <div class="live-toggle-container ms-3 text-end" title="Live Data" style="pointer-events: auto;">
+                                <div class="live-toggle-label">Live Data <i class="bi bi-rss"></i></div>
+                                <div class="form-check form-switch justify-content-end d-flex mt-1">
+                                    <input class="form-check-input" type="checkbox" id="selectedUserLiveSwitch" ${enabled ? 'checked' : ''}>
+                                    <label class="form-check-label visually-hidden" for="selectedUserLiveSwitch">Live Data</label>
+                                </div>
                             </div>
                         </div>
                     </div>
