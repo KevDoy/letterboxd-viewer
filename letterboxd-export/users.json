@@ -1,33 +1,14 @@
 {
   "users": [
     {
-      "id": "Kev",
-      "displayName": "Kev",
-      "folder": "Kev",
-      "lastUpdated": "2025-08-01",
-      "enableLiveData": true,
-      "letterboxdUsername": "ghosteffect",
-      "lists": [
-        "2019.csv",
-        "lapflix-2023-watchlist.csv",
-        "lapflix-movie-club.csv",
-        "the-tarantino-movies-ranked.csv"
-      ]
-    },
-    {
-      "id": "Jonah", 
-      "displayName": "Jonah",
-      "folder": "Jonah",
-      "enableLiveData": true,
-      "letterboxdUsername": "jonahathey",
+      "id": "SampleUser",
+      "displayName": "SampleUser",
+      "folder": "SampleUser",
       "lastUpdated": "2025-07-31",
       "lists": [
-        "2023-top-10.csv",
-        "2024-top-10.csv",
-        "movies-i-have-watched-with-adeline.csv",
-        "movies-to-watch-with-adeline.csv",
-        "top-10-films.csv"
-      ]
+        "official-top-10-films-with-the-most-fans.csv"
+      ],
+      "enableLiveData": true
     }
   ]
 }
