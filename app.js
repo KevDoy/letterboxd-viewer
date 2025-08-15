@@ -93,12 +93,11 @@ class LetterboxdViewer {
     // Internal: check if live is enabled for the current user
     isLiveEnabledForCurrentUser() {
         if (!this.currentUser) return false;
-        const key = `live_enabled_${this.currentUser.id}`;
-        const stored = localStorage.getItem(key);
-        if (stored == null && this._liveDataState && this._liveDataState[this.currentUser.id] != null) {
+        if (this._liveDataState && this._liveDataState[this.currentUser.id] != null) {
             return !!this._liveDataState[this.currentUser.id];
         }
-        return stored === 'true';
+        // Default OFF when not set
+        return false;
     }
     
     async init() {
@@ -577,18 +576,18 @@ class LetterboxdViewer {
     const userKey = this.currentUser.id;
     const username = this.getLetterboxdUsername();
     const defaultEnabled = this.currentUser.enableLiveData === true;
-    const stored = localStorage.getItem(`live_enabled_${userKey}`);
-    const enabled = stored == null ? false : stored === 'true';
-    this._liveDataState[userKey] = enabled;
+    // Do not persist across visits; default OFF unless already set in-memory this session
+    if (this._liveDataState[userKey] == null) {
+        this._liveDataState[userKey] = false;
+    }
 
     // Initialize RSS manager (enabled flag just gates availability; fetching is on toggle)
     window.letterboxdRSS.init(username, defaultEnabled);
     }
 
     async toggleLiveData(enabled) {
-        // Persist per-user preference
+        // Keep preference in-memory only for this session
         if (this.currentUser) {
-            localStorage.setItem(`live_enabled_${this.currentUser.id}`, enabled ? 'true' : 'false');
             if (!this._liveDataState) this._liveDataState = {};
             this._liveDataState[this.currentUser.id] = enabled;
         }
